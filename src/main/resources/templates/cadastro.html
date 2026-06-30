@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Cadastro - Sistema de Estoque</title>
+
+    <!-- ✅ em Spring Boot arquivos static NÃO usam ../ -->
+    <link rel="stylesheet" href="../static/cadastro.css">
+</head>
+
+<body>
+
+<div class="container">
+    <h2>Cadastro de Usuário</h2>
+
+    <form id="cadastroForm">
+
+        <input
+                type="text"
+                id="username"
+                placeholder="Usuário"
+                required
+        />
+
+        <input
+                type="password"
+                id="password"
+                placeholder="Senha"
+                required
+        />
+
+        <select id="role">
+            <option value="USER">Usuário</option>
+            <option value="ADMIN">Administrador</option>
+        </select>
+
+        <button type="submit">Cadastrar</button>
+
+        <p id="mensagem"></p>
+    </form>
+</div>
+
+<!-- ✅ faltava fechar aspas -->
+<script src="../static/cadastro.js"></script>
+
+</body>
+</html>
