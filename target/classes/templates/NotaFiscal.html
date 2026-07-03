@@ -236,20 +236,99 @@
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
 
-        const formData = new FormData(form);
-        const notaFiscal = Object.fromEntries(formData.entries());
+        function montarNotaFiscal() {
 
-        // Captura os itens da tabela dinamicamente
-        notaFiscal.itens = [];
-        document.querySelectorAll('.input-item-row').forEach(row => {
-            const item = {};
-            row.querySelectorAll('[data-field]').forEach(input => {
-                item[input.getAttribute('data-field')] = input.value;
-            });
-            if(item.descricao) { // Apenas adiciona se tiver descrição
-                notaFiscal.itens.push(item);
-            }
-        });
+            const campos = form.elements;
+
+            return {
+                numero: campos.numero.value,
+                serie: campos.serie.value,
+                naturezaOperacao: campos.naturezaOperacao.value,
+                dataHoraEmissao: campos.dataHoraEmissao.value,
+
+                razaoSocial: campos.razaoSocial.value,
+                cnpjCpf: campos.cnpjCpf.value,
+                inscricaoEstadual: campos.inscricaoEstadual.value,
+                inscricaoEstadualSt: campos.inscricaoEstadualSt.value,
+
+                endereco: campos.endereco.value,
+                bairro: campos.bairro.value,
+                cep: campos.cep.value,
+                municipio: campos.municipio.value,
+                uf: campos.uf.value,
+                fone: campos.fone.value,
+
+                baseCalculoIcms: numero(campos.baseCalculoIcms.value),
+                valorIcms: numero(campos.valorIcms.value),
+
+                baseCalculoIcmsSt: numero(campos.baseCalculoIcmsSt.value),
+                valorIcmsSt: numero(campos.valorIcmsSt.value),
+
+                valorFrete: numero(campos.valorFrete.value),
+                valorSeguro: numero(campos.valorSeguro.value),
+
+                desconto: numero(campos.desconto.value),
+                valorIpi: numero(campos.valorIpi.value),
+
+                valorTotalProdutos: numero(campos.valorTotalProdutos.value),
+                valorTotalNota: numero(campos.valorTotalNota.value),
+
+                itens: obterItens()
+            };
+
+        }
+
+        function numero(valor) {
+            return valor === "" ? null : Number(valor);
+        }
+
+        function obterItens() {
+
+            return [...document.querySelectorAll(".input-item-row")]
+
+                .map(row => ({
+
+                    codigo: row.querySelector('[data-field="codigo"]').value,
+
+                    descricao: row.querySelector('[data-field="descricao"]').value,
+
+                    ncm: row.querySelector('[data-field="ncm"]').value,
+
+                    cst: row.querySelector('[data-field="cst"]').value,
+
+                    cfop: row.querySelector('[data-field="cfop"]').value,
+
+                    unidade: row.querySelector('[data-field="unidade"]').value,
+
+                    quantidade: numero(row.querySelector('[data-field="quantidade"]').value),
+
+                    valorUnitario: numero(row.querySelector('[data-field="valorUnitario"]').value),
+
+                    valorTotal: numero(row.querySelector('[data-field="valorTotal"]').value)
+
+                }))
+
+                .filter(item => item.descricao !== "");
+
+
+
+        }
+        const notaFiscal = montarNotaFiscal();
+
+        if (!notaFiscal.razaoSocial) {
+            alert("Informe a razão social.");
+            return;
+        }
+
+        if (notaFiscal.itens.length === 0) {
+            alert("Adicione pelo menos um item.");
+            return;
+        }
+
+        if (!notaFiscal.numero) {
+            alert("Informe o número da nota.");
+            return;
+        }
 
         try {
             const response = await fetch('http://localhost:8080/api/notas-fiscais', {
@@ -260,11 +339,17 @@
 
             if (response.ok) {
                 alert('Nota Fiscal gravada com sucesso no MySQL!');
+                const notaSalva = await response.json();
+                alert(`Nota ${notaSalva.numero} salva com sucesso!`);
+                console.log(notaSalva);
                 form.reset();
                 tabelaItens.innerHTML = '';
                 criarLinhaItem();
             } else {
-                alert('Falha ao salvar nota fiscal.');
+
+                const erro = await response.text();
+                console.error(erro);
+                alert(erro);
             }
         } catch (error) {
             console.error('Erro na requisição:', error);
