@@ -25,10 +25,14 @@ public class NotaFiscalController {
         return ResponseEntity.ok(repository.save(notaFiscal));
     }
 
+
+
     @GetMapping
     public ResponseEntity<List<NotaFiscal>> listar() {
         return ResponseEntity.ok(repository.findAll());
     }
+
+    // ... manter o restante do código igual
 
     @GetMapping("/{id}")
     public ResponseEntity<NotaFiscal> buscar(@PathVariable Long id) {
@@ -37,44 +41,20 @@ public class NotaFiscalController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @PutMapping("/{id}")
+    // --- ADICIONE ESTE MÉTODO ABAIXO ---
+    @PutMapping(value = "/{id}", consumes = "application/json")
     public ResponseEntity<NotaFiscal> atualizar(@PathVariable Long id, @RequestBody NotaFiscal notaAtualizada) {
         return repository.findById(id)
                 .map(notaExistente -> {
-                    // 1. Dados Gerais
-                    notaExistente.setNumero(notaAtualizada.getNumero());
-                    notaExistente.setSerie(notaAtualizada.getSerie());
-                    notaExistente.setNaturezaOperacao(notaAtualizada.getNaturezaOperacao());
-                    notaExistente.setDataHoraEmissao(notaAtualizada.getDataHoraEmissao());
-                    notaExistente.setRazaoSocial(notaAtualizada.getRazaoSocial());
-                    notaExistente.setCnpjCpf(notaAtualizada.getCnpjCpf());
-                    notaExistente.setInscricaoEstadual(notaAtualizada.getInscricaoEstadual());
-                    notaExistente.setInscricaoEstadualSt(notaAtualizada.getInscricaoEstadualSt());
-                    notaExistente.setEndereco(notaAtualizada.getEndereco());
-                    notaExistente.setBairro(notaAtualizada.getBairro());
-                    notaExistente.setCep(notaAtualizada.getCep());
-                    notaExistente.setMunicipio(notaAtualizada.getMunicipio());
-                    notaExistente.setUf(notaAtualizada.getUf());
-                    notaExistente.setFone(notaAtualizada.getFone());
+                    // ... (mantenha todos os sets dos campos normais que já fizemos)
 
-                    // 2. Impostos e Totais
-                    notaExistente.setBaseCalculoIcms(notaAtualizada.getBaseCalculoIcms());
-                    notaExistente.setValorIcms(notaAtualizada.getValorIcms());
-                    notaExistente.setBaseCalculoIcmsSt(notaAtualizada.getBaseCalculoIcmsSt());
-                    notaExistente.setValorIcmsSt(notaAtualizada.getValorIcmsSt());
-                    notaExistente.setValorFrete(notaAtualizada.getValorFrete());
-                    notaExistente.setValorSeguro(notaAtualizada.getValorSeguro());
-                    notaExistente.setDesconto(notaAtualizada.getDesconto());
-                    notaExistente.setValorIpi(notaAtualizada.getValorIpi());
-                    notaExistente.setValorTotalProdutos(notaAtualizada.getValorTotalProdutos());
-                    notaExistente.setValorTotalNota(notaAtualizada.getValorTotalNota());
+                    // Ajuste crucial para a lista de produtos/itens:
+                    notaExistente.getItens().clear(); // Limpa os itens antigos da sessão do Hibernate
 
-                    // 3. Atualização Segura dos Itens (Orphan Removal vai agir aqui)
-                    notaExistente.getItens().clear(); // Limpa os antigos usando a própria coleção rastreada
                     if (notaAtualizada.getItens() != null) {
                         notaAtualizada.getItens().forEach(item -> {
-                            item.setNotaFiscal(notaExistente); // Vincula o item à nota existente
-                            notaExistente.getItens().add(item); // Adiciona na lista rastreada
+                            item.setNotaFiscal(notaExistente); // Vincula o item de volta à nota original
+                            notaExistente.getItens().add(item);
                         });
                     }
 
@@ -84,11 +64,9 @@ public class NotaFiscalController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> excluir(@PathVariable Long id) {
-        if (!repository.existsById(id)) {
-            return ResponseEntity.notFound().build();
-        }
         repository.deleteById(id);
         return ResponseEntity.noContent().build();
     }

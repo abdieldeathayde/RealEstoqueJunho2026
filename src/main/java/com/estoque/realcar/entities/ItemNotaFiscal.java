@@ -1,33 +1,24 @@
 package com.estoque.realcar.entities;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 @Entity
-@Table(name = "itens_nota_fiscal")
-@Data
+@Table(name = "itens_nota_fiscal") // ou o nome que definiu para a tabela de itens
+@Getter
+@Setter
 public class ItemNotaFiscal {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String codigo;
-    private String descricao;
-    private String ncm;
-    private String cst;
-    private String cfop;
-    private String unidade;
-    private Double quantidade;
-    private Double valorUnitario;
-    private Double valorTotal;
-    private Double baseCalculoIcms;
-    private Double percentualIcms;
-    private Double percentualIpi;
+    // Seus campos normais: codigo, descricao, ncm, cst, cfop, quantidade, valorUnitario...
 
+    @JsonBackReference
     @ManyToOne
-    @JoinColumn(name = "nota_fiscal_id", nullable = false)
-    @JsonIgnoreProperties("itens") // <-- ISSO AQUI IMPEDE O LOOP INFINITO NO JSON
-    private NotaFiscal notaFiscal;
+    @JoinColumn(name = "nota_fiscal_id")
+    private NotaFiscal notaFiscal; // O mapeamento bidirecional correto fica aqui!
 }

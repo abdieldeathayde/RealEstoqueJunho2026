@@ -1,6 +1,8 @@
 package com.estoque.realcar.entities;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -24,7 +26,7 @@ public class NotaFiscal {
     private String numero;
     private String serie;
     private String naturezaOperacao;
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss[.SSS][XXX]")
     private LocalDateTime dataHoraEmissao;
     @JsonFormat(pattern = "HH:mm:ss")// Alterado para trabalhar com datas nativas do Java
     private LocalTime horaSaida;           // Alterado para trabalhar com horários nativos do Java
@@ -66,9 +68,10 @@ public class NotaFiscal {
     private BigDecimal pesoBruto;   // Alterado para BigDecimal devido às casas decimais de precisão
     private BigDecimal pesoLiquido; // Alterado para BigDecimal devido às casas decimais de precisão
 
+    // ... restante dos atributos normais (numero, serie, etc.)
 
-
+    @JsonManagedReference
     @OneToMany(mappedBy = "notaFiscal", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<ItemNotaFiscal> itens = new ArrayList<>(); // Inicializada para evitar NullPointerException
-
+    private List<ItemNotaFiscal> itens = new ArrayList<>(); // Boa prática inicializar a lista
 }
+
