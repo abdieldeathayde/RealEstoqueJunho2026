@@ -1,5 +1,6 @@
 package com.estoque.realcar.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -24,4 +25,9 @@ public class ItemNotaFiscal {
     private Double baseCalculoIcms;
     private Double percentualIcms;
     private Double percentualIpi;
+
+    @ManyToOne
+    @JoinColumn(name = "nota_fiscal_id", nullable = false)
+    @JsonIgnoreProperties("itens") // <-- ISSO AQUI IMPEDE O LOOP INFINITO NO JSON
+    private NotaFiscal notaFiscal;
 }

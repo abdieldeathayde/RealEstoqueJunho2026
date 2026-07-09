@@ -312,10 +312,10 @@ form.addEventListener('submit', async (e) => {
 // Eventos de Inicialização e Mapeamento de botões de navegação
 btnNovaNota.addEventListener('click', () => {
     form.reset();
-    document.getElementById('notaId').value = '';
-    tabelaItens.innerHTML = '';
+    document.getElementById('notaId').value = ''; // Garante que o ID da nota editada foi esquecido
+    tabelaItens.innerHTML = ''; // Limpa as linhas físicas de produtos da tela anterior
     exibirTelaFormulario('CRIAR');
-    criarLinhaItem();
+    criarLinhaItem(); // Abre uma única linha em branco para a nova nota
 });
 
 btnVoltar.addEventListener('click', exibirTelaListagem);
