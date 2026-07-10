@@ -73,11 +73,6 @@ function criarLinhaItem(dadosItem = null) {
     const row = tabelaItens.insertRow();
     row.className = "hover:bg-slate-50 transition-colors input-item-row";
 
-    // Armazena o ID do item se ele existir
-    if (dadosItem?.id) {
-        row.dataset.itemId = dadosItem.id;
-    }
-
     const isReadonly = modoFormulario === 'VISUALIZAR' ? 'disabled' : '';
     const classeOcultaAcao = modoFormulario === 'VISUALIZAR' ? 'hidden' : '';
 
@@ -85,8 +80,8 @@ function criarLinhaItem(dadosItem = null) {
         <td class="p-2"><input type="text" class="w-16 border rounded p-1" data-field="codigo" value="${dadosItem?.codigo || ''}" ${isReadonly}></td>
         <td class="p-2"><input type="text" class="w-full border rounded p-1" data-field="descricao" value="${dadosItem?.descricao || ''}" ${isReadonly}></td>
         <td class="p-2"><input type="text" class="w-16 border rounded p-1" data-field="ncm" value="${dadosItem?.ncm || ''}" ${isReadonly}></td>
-        <td class="p-2"><input type="text" class="w-12 border rounded p-1" data-field="cst" value="${dadosItem?.cst !== undefined && dadosItem?.cst !== null ? dadosItem.cst : ''}" ${isReadonly}></td>
-        <td class="p-2"><input type="text" class="w-12 border rounded p-1" data-field="cfop" value="${dadosItem?.cfop !== undefined && dadosItem?.cfop !== null ? dadosItem.cfop : ''}" ${isReadonly}></td>
+        <td class="p-2"><input type="text" class="w-12 border rounded p-1" data-field="cst" value="${dadosItem?.cst || ''}" ${isReadonly}></td>
+        <td class="p-2"><input type="text" class="w-12 border rounded p-1" data-field="cfop" value="${dadosItem?.cfop || ''}" ${isReadonly}></td>
         <td class="p-2"><input type="text" class="w-10 border rounded p-1" data-field="unidade" value="${dadosItem?.unidade || ''}" ${isReadonly}></td>
         <td class="p-2"><input type="number" class="w-14 border rounded p-1" data-field="quantidade" oninput="calcularTotalItem(this)" value="${dadosItem?.quantidade || ''}" ${isReadonly}></td>
         <td class="p-2"><input type="number" step="0.01" class="w-20 border rounded p-1" data-field="valorUnitario" oninput="calcularTotalItem(this)" value="${dadosItem?.valorUnitario || ''}" ${isReadonly}></td>
@@ -134,7 +129,6 @@ function preencherFormulario(nota) {
 function montarNotaFiscal() {
     const campos = form.elements;
     return {
-        id: numero(document.getElementById('notaId').value), // Adicionado o ID da nota pai
         numero: campos.numero.value,
         serie: campos.serie.value,
         naturezaOperacao: campos.naturezaOperacao.value,
@@ -166,14 +160,11 @@ function montarNotaFiscal() {
 function obterItens() {
     return [...document.querySelectorAll(".input-item-row")]
         .map(row => ({
-            // Se o item já tiver um ID salvo associado à linha, capture-o aqui (opcional)
-            id: row.dataset.itemId ? Number(row.dataset.itemId) : null,
             codigo: row.querySelector('[data-field="codigo"]').value,
             descricao: row.querySelector('[data-field="descricao"]').value,
             ncm: row.querySelector('[data-field="ncm"]').value,
-            // Tratando strings vazias para null se forem mapeados como números no Java:
-            cst: numero(row.querySelector('[data-field="cst"]').value),
-            cfop: numero(row.querySelector('[data-field="cfop"]').value),
+            cst: row.querySelector('[data-field="cst"]').value,
+            cfop: row.querySelector('[data-field="cfop"]').value,
             unidade: row.querySelector('[data-field="unidade"]').value,
             quantidade: numero(row.querySelector('[data-field="quantidade"]').value),
             valorUnitario: numero(row.querySelector('[data-field="valorUnitario"]').value),
@@ -321,9 +312,12 @@ form.addEventListener('submit', async (e) => {
 // Eventos de Inicialização e Mapeamento de botões de navegação
 btnNovaNota.addEventListener('click', () => {
     form.reset();
+    document.getElementById('notaId').value = '';
+    tabelaItens.innerHTML = '';
     document.getElementById('notaId').value = ''; // Garante que o ID da nota editada foi esquecido
     tabelaItens.innerHTML = ''; // Limpa as linhas físicas de produtos da tela anterior
     exibirTelaFormulario('CRIAR');
+    criarLinhaItem();
     criarLinhaItem(); // Abre uma única linha em branco para a nova nota
 });
 

@@ -43,17 +43,64 @@ public class NotaFiscalController {
 
     // --- ADICIONE ESTE MÉTODO ABAIXO ---
     @PutMapping(value = "/{id}", consumes = "application/json")
+    @jakarta.transaction.Transactional // <-- ADICIONE ISSO AQUI para garantir a consistência da transação com o Hibernate
     public ResponseEntity<NotaFiscal> atualizar(@PathVariable Long id, @RequestBody NotaFiscal notaAtualizada) {
         return repository.findById(id)
                 .map(notaExistente -> {
-                    // ... (mantenha todos os sets dos campos normais que já fizemos)
+                    // 1. Atualização dos Dados Gerais
+                    notaExistente.setNumero(notaAtualizada.getNumero());
+                    notaExistente.setSerie(notaAtualizada.getSerie());
+                    notaExistente.setNaturezaOperacao(notaAtualizada.getNaturezaOperacao());
+                    notaExistente.setDataHoraEmissao(notaAtualizada.getDataHoraEmissao());
+                    notaExistente.setHoraSaida(notaAtualizada.getHoraSaida());
 
-                    // Ajuste crucial para a lista de produtos/itens:
-                    notaExistente.getItens().clear(); // Limpa os itens antigos da sessão do Hibernate
+                    // 2. Emitente / Destinatário
+                    notaExistente.setCnpjCpf(notaAtualizada.getCnpjCpf());
+                    notaExistente.setInscricaoEstadual(notaAtualizada.getInscricaoEstadual());
+                    notaExistente.setInscricaoEstadualSt(notaAtualizada.getInscricaoEstadualSt());
+                    notaExistente.setRazaoSocial(notaAtualizada.getRazaoSocial());
+                    notaExistente.setEndereco(notaAtualizada.getEndereco());
+                    notaExistente.setBairro(notaAtualizada.getBairro());
+                    notaExistente.setCep(notaAtualizada.getCep());
+                    notaExistente.setMunicipio(notaAtualizada.getMunicipio());
+                    notaExistente.setUf(notaAtualizada.getUf());
+                    notaExistente.setFone(notaAtualizada.getFone());
+
+                    // 3. Valores Financeiros e Impostos (BigDecimal)
+                    notaExistente.setBaseCalculoIcms(notaAtualizada.getBaseCalculoIcms());
+                    notaExistente.setValorIcms(notaAtualizada.getValorIcms());
+                    notaExistente.setBaseCalculoIcmsSt(notaAtualizada.getBaseCalculoIcmsSt());
+                    notaExistente.setValorIcmsSt(notaAtualizada.getValorIcmsSt());
+                    notaExistente.setValorTotalProdutos(notaAtualizada.getValorTotalProdutos());
+                    notaExistente.setValorFrete(notaAtualizada.getValorFrete());
+                    notaExistente.setValorSeguro(notaAtualizada.getValorSeguro());
+                    notaExistente.setDesconto(notaAtualizada.getDesconto());
+                    notaExistente.setOutrasDespesas(notaAtualizada.getOutrasDespesas());
+                    notaExistente.setValorIpi(notaAtualizada.getValorIpi());
+                    notaExistente.setValorTotalNota(notaAtualizada.getValorTotalNota());
+
+                    // 4. Transportador / Volumes
+                    notaExistente.setFretePorConta(notaAtualizada.getFretePorConta());
+                    notaExistente.setCodigoAntt(notaAtualizada.getCodigoAntt());
+                    notaExistente.setPlacaVeiculo(notaAtualizada.getPlacaVeiculo());
+                    notaExistente.setUfVeiculo(notaAtualizada.getUfVeiculo());
+                    notaExistente.setQuantidadeVolumes(notaAtualizada.getQuantidadeVolumes());
+                    notaExistente.setEspecieVolumes(notaAtualizada.getEspecieVolumes());
+                    notaExistente.setMarcaVolumes(notaAtualizada.getMarcaVolumes());
+                    notaExistente.setNumeracaoVolumes(notaAtualizada.getNumeracaoVolumes());
+                    notaExistente.setPesoBruto(notaAtualizada.getPesoBruto());
+                    notaExistente.setPesoLiquido(notaAtualizada.getPesoLiquido());
+
+                    // 5. Ajuste seguro para a lista de produtos/itens:
+                    // Em vez de apenas dar clear(), desvinculamos explicitamente os antigos antes
+                    if (notaExistente.getItens() != null) {
+                        notaExistente.getItens().forEach(item -> item.setNotaFiscal(null));
+                        notaExistente.getItens().clear();
+                    }
 
                     if (notaAtualizada.getItens() != null) {
                         notaAtualizada.getItens().forEach(item -> {
-                            item.setNotaFiscal(notaExistente); // Vincula o item de volta à nota original
+                            item.setNotaFiscal(notaExistente); // Revincula o item à nota original
                             notaExistente.getItens().add(item);
                         });
                     }
@@ -63,7 +110,6 @@ public class NotaFiscalController {
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
-
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> excluir(@PathVariable Long id) {
