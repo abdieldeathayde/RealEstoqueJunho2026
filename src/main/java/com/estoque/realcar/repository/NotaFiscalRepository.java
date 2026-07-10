@@ -9,5 +9,5 @@ import java.util.Optional;
 public interface NotaFiscalRepository extends JpaRepository<NotaFiscal, Long> {
 
     // Caso precise buscar uma nota específica pelo número no futuro
-    Optional<NotaFiscal> findByNumero(String numero);
+    Optional<NotaFiscal> findByNumero(Integer numero);
 }
