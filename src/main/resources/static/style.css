@@ -101,3 +101,11 @@ body {
       cursor: not-allowed;
       opacity: 0.6;
   }
+
+  /* Responsive tweaks for small screens */
+  @media (max-width: 640px) {
+      #productModal .modal-animation,
+      #deleteModal .modal-animation {
+          max-width: calc(100vw - 2rem);
+      }
+  }

@@ -1,0 +1,223 @@
+/* ==========================================================================
+   Design System - Sistema de Estoque
+   Tema visual compartilhado entre todas as telas da aplicação
+   ========================================================================== */
+
+:root {
+    --color-primary: #2563eb;
+    --color-primary-dark: #1d4ed8;
+    --color-primary-light: #dbeafe;
+    --color-slate-50: #f8fafc;
+    --color-slate-100: #f1f5f9;
+    --color-slate-200: #e2e8f0;
+    --color-slate-600: #475569;
+    --color-slate-900: #0f172a;
+    --shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
+    --shadow-md: 0 4px 12px -2px rgba(15, 23, 42, 0.08);
+    --radius: 12px;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', 'Inter', Arial, sans-serif;
+}
+
+/* ---------- Navbar ---------- */
+.app-navbar {
+    background: #ffffff;
+    border-bottom: 1px solid var(--color-slate-200);
+    box-shadow: var(--shadow-sm);
+    position: sticky;
+    top: 0;
+    z-index: 40;
+}
+
+.app-navbar .brand {
+    font-weight: 700;
+    font-size: 1.125rem;
+    color: var(--color-slate-900);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.app-navbar .nav-link {
+    color: var(--color-slate-600);
+    font-weight: 500;
+    font-size: 0.9rem;
+    padding: 0.5rem 0.9rem;
+    border-radius: 8px;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+
+.app-navbar .nav-link:hover {
+    background: var(--color-slate-100);
+    color: var(--color-slate-900);
+}
+
+.app-navbar .nav-link.active {
+    background: var(--color-primary-light);
+    color: var(--color-primary-dark);
+}
+
+.app-navbar .btn-logout {
+    color: #dc2626;
+    font-weight: 500;
+    font-size: 0.85rem;
+    padding: 0.5rem 0.9rem;
+    border-radius: 8px;
+    transition: background 0.15s ease;
+    white-space: nowrap;
+}
+
+.app-navbar .btn-logout:hover {
+    background: #fef2f2;
+}
+
+/* Mobile nav toggle */
+.nav-toggle {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .nav-toggle {
+        display: inline-flex;
+    }
+    .app-navbar .nav-links {
+        display: none;
+        flex-direction: column;
+        width: 100%;
+        padding: 0.5rem 0 1rem;
+    }
+    .app-navbar .nav-links.open {
+        display: flex;
+    }
+    .app-navbar .nav-links .nav-link,
+    .app-navbar .nav-links .btn-logout {
+        width: 100%;
+    }
+}
+
+/* ---------- Auth pages (login/cadastro) ---------- */
+.auth-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 55%, #2563eb 100%);
+    font-family: 'Segoe UI', 'Inter', Arial, sans-serif;
+    padding: 1.5rem;
+}
+
+.auth-card {
+    background: #ffffff;
+    width: 100%;
+    max-width: 380px;
+    border-radius: 16px;
+    box-shadow: 0 20px 45px -15px rgba(0, 0, 0, 0.35);
+    padding: 2.25rem 2rem;
+}
+
+.auth-card .auth-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin: 0 auto 1rem;
+}
+
+.auth-card h2 {
+    text-align: center;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--color-slate-900);
+    margin: 0 0 0.25rem;
+}
+
+.auth-card .auth-subtitle {
+    text-align: center;
+    color: #64748b;
+    font-size: 0.875rem;
+    margin: 0 0 1.5rem;
+}
+
+.auth-card label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-slate-600);
+    margin: 0 0 0.35rem;
+}
+
+.auth-card input,
+.auth-card select {
+    width: 100%;
+    padding: 0.65rem 0.85rem;
+    margin-bottom: 1.1rem;
+    border-radius: 9px;
+    border: 1px solid #cbd5e1;
+    font-size: 0.95rem;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.auth-card input:focus,
+.auth-card select:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.auth-card button[type="submit"] {
+    width: 100%;
+    padding: 0.75rem;
+    border: none;
+    border-radius: 9px;
+    background: var(--color-primary);
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.auth-card button[type="submit"]:hover {
+    background: var(--color-primary-dark);
+}
+
+.auth-card button[type="submit"]:active {
+    transform: scale(0.98);
+}
+
+.auth-card #mensagem {
+    margin-top: 1rem;
+    text-align: center;
+    font-weight: 600;
+    font-size: 0.85rem;
+    min-height: 1.1rem;
+}
+
+.auth-card .auth-footer {
+    text-align: center;
+    margin-top: 1.25rem;
+    font-size: 0.85rem;
+    color: #64748b;
+}
+
+.auth-card .auth-footer a {
+    color: var(--color-primary);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.auth-card .auth-footer a:hover {
+    text-decoration: underline;
+}

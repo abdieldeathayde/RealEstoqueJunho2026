@@ -1,12 +1,19 @@
 package com.estoque.realcar.entities;
 
 import jakarta.persistence.*;
+<<<<<<< HEAD
 import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
+=======
+import lombok.Data;
+
+import java.time.LocalDate;
+>>>>>>> 6a9f286 (adicionando modificacoes)
 import java.util.List;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "notas_fiscais")
@@ -26,7 +33,11 @@ public class NotaFiscal {
     private Integer serie;
     private String naturezaOperacao;
     private LocalDate dataHoraEmissao;
+<<<<<<< HEAD
     private LocalTime horaSaida;
+=======
+    private String horaSaida;
+>>>>>>> 6a9f286 (adicionando modificacoes)
 
     // 2. Emitente / Destinatário
     private String cnpjCpf;
@@ -40,7 +51,11 @@ public class NotaFiscal {
     private String uf;
     private String fone;
 
+<<<<<<< HEAD
     // 3. Valores Financeiros e Impostos
+=======
+    // Cálculo do Imposto (Totais)
+>>>>>>> 6a9f286 (adicionando modificacoes)
     private BigDecimal baseCalculoIcms;
     private BigDecimal valorIcms;
     private BigDecimal baseCalculoIcmsSt;
@@ -65,8 +80,14 @@ public class NotaFiscal {
     private BigDecimal pesoBruto;
     private BigDecimal pesoLiquido;
 
+<<<<<<< HEAD
     // 5. Relacionamento com Itens
     @OneToMany(mappedBy = "notaFiscal", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default
     private List<ItemNotaFiscal> itens = new ArrayList<>();
+=======
+    @OneToMany(mappedBy = "notaFiscal", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ItemNotaFiscal> itens;
+
+>>>>>>> 6a9f286 (adicionando modificacoes)
 }

@@ -1,8 +1,11 @@
 package com.estoque.realcar.controller;
 
-import com.estoque.realcar.entities.NotaFiscal;
-import com.estoque.realcar.repository.NotaFiscalRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.estoque.realcar.dto.NotaFiscalRequestDTO;
+import com.estoque.realcar.dto.NotaFiscalResponseDTO;
+import com.estoque.realcar.service.NotaFiscalService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -11,12 +14,13 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/notas-fiscais")
 @CrossOrigin(origins = "*")
+@RequiredArgsConstructor
 public class NotaFiscalController {
 
-    @Autowired
-    private NotaFiscalRepository repository;
+    private final NotaFiscalService notaFiscalService;
 
     @PostMapping
+<<<<<<< HEAD
     public ResponseEntity<NotaFiscal> criarNotaFiscal(@RequestBody NotaFiscal notaFiscal) {
         // Regra crucial: Precisamos iterar nos itens e dizer a cada um deles quem é a nota pai
         if (notaFiscal.getItens() != null) {
@@ -35,6 +39,20 @@ public class NotaFiscalController {
         return repository.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
+=======
+    public ResponseEntity<NotaFiscalResponseDTO> criarNotaFiscal(@RequestBody @Valid NotaFiscalRequestDTO dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(notaFiscalService.salvar(dto));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<NotaFiscalResponseDTO> buscarPorId(@PathVariable Long id) {
+        return ResponseEntity.ok(notaFiscalService.buscarPorId(id));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<NotaFiscalResponseDTO> atualizar(@PathVariable Long id, @RequestBody @Valid NotaFiscalRequestDTO dto) {
+        return ResponseEntity.ok(notaFiscalService.atualizar(id, dto));
+>>>>>>> 6a9f286 (adicionando modificacoes)
     }
 
     @PutMapping("/{id}")
@@ -86,10 +104,14 @@ public class NotaFiscalController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> excluir(@PathVariable Long id) {
+<<<<<<< HEAD
         if (!repository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }
         repository.deleteById(id);
+=======
+        notaFiscalService.excluir(id);
+>>>>>>> 6a9f286 (adicionando modificacoes)
         return ResponseEntity.noContent().build();
     }
 }
