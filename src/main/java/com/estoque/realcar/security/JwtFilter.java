@@ -28,9 +28,10 @@ public class JwtFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
-        String authHeader = request.getHeader("Authorization");
+        String authHeader =
+                request.getHeader("Authorization");
 
-        // Sem token → continua a requisição
+        // Não existe token
         if (authHeader == null ||
                 !authHeader.startsWith("Bearer ")) {
 
@@ -38,15 +39,14 @@ public class JwtFilter extends OncePerRequestFilter {
             return;
         }
 
-        String token = authHeader.substring(7);
+        String token =
+                authHeader.substring(7);
 
         try {
 
-            // Extrai o username do token
             String username =
                     jwtService.extractUsername(token);
 
-            // Evita sobrescrever uma autenticação existente
             if (username != null &&
                     SecurityContextHolder
                             .getContext()
@@ -56,12 +56,12 @@ public class JwtFilter extends OncePerRequestFilter {
                         userDetailsService
                                 .loadUserByUsername(username);
 
-                // Valida o token
                 if (jwtService.isTokenValid(
                         token,
-                        userDetails)) {
+                        userDetails
+                )) {
 
-                    UsernamePasswordAuthenticationToken auth =
+                    UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(
                                     userDetails,
                                     null,
@@ -70,14 +70,18 @@ public class JwtFilter extends OncePerRequestFilter {
 
                     SecurityContextHolder
                             .getContext()
-                            .setAuthentication(auth);
+                            .setAuthentication(
+                                    authentication
+                            );
                 }
             }
 
         } catch (Exception e) {
 
-            // Token inválido, expirado ou malformado.
+            // Token inválido.
             // A requisição continua sem autenticação.
+            SecurityContextHolder
+                    .clearContext();
         }
 
         filterChain.doFilter(request, response);

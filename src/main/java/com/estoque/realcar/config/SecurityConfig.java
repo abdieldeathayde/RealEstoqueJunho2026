@@ -1,14 +1,13 @@
 package com.estoque.realcar.config;
 
 import com.estoque.realcar.security.CustomUserDetailsService;
-import com.estoque.realcar.security.JwtAuthenticationFilter;
+import com.estoque.realcar.security.JwtFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -28,16 +27,21 @@ import java.util.List;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    private final JwtAuthenticationFilter jwtFilter;
+    private final JwtFilter jwtFilter;
     private final CustomUserDetailsService userDetailsService;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtFilter, CustomUserDetailsService userDetailsService) {
+    public SecurityConfig(
+            JwtFilter jwtFilter,
+            CustomUserDetailsService userDetailsService
+    ) {
         this.jwtFilter = jwtFilter;
         this.userDetailsService = userDetailsService;
     }
 
     @Bean
-    public AuthenticationProvider authenticationProvider(PasswordEncoder passwordEncoder) {
+    public AuthenticationProvider authenticationProvider(
+            PasswordEncoder passwordEncoder
+    ) {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
         provider.setUserDetailsService(userDetailsService);
         provider.setPasswordEncoder(passwordEncoder);
@@ -46,15 +50,43 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+
         http
+                // Desabilita CSRF (essencial em APIs REST stateless)
                 .csrf(AbstractHttpConfigurer::disable)
-                .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Aponta para a configuração detalhada de CORS
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
+                // Configuração de CORS
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+
+                // Estado de sessão stateless (JWT)
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
+
+                // Regras de Autorização de Acesso aos Endpoints
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Permite requisições pre-flight
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/produtos", "/produtos/**").permitAll() // Liberado para requisições sem token
+
+                        // 1. Libera requisições OPTIONS (Pre-flight CORS do navegador)
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                        // 2. Autenticação (Login, Cadastro, etc.)
+                        .requestMatchers("/auth/**", "/api/auth/**").permitAll()
+
+                        // 3. Produtos
+                        .requestMatchers("/produtos", "/produtos/**").permitAll()
+
+                        // 4. NOTAS FISCAIS: Libera a rota base E todas as sub-rotas (com IDs)
+                        // Isso permite GET, POST, PUT e DELETE em /api/notas-fiscais e /api/notas-fiscais/{id}
+                        .requestMatchers("/api/notas-fiscais", "/api/notas-fiscais/**").permitAll()
+
+                        // 5. Qualquer outra rota não mapeada exige Token JWT
                         .anyRequest().authenticated()
+                )
+
+                // Insere o filtro JWT antes do filtro padrão do Spring
+                .addFilterBefore(
+                        jwtFilter,
+                        UsernamePasswordAuthenticationFilter.class
                 );
 
         return http.build();
@@ -62,26 +94,30 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
+
         CorsConfiguration config = new CorsConfiguration();
 
-        // Permite a origem file:// ou qualquer origem de desenvolvimento
+        // Para ambiente de dev local, permitimos a origem explícita do front-end ou wildcard controlado
         config.setAllowedOriginPatterns(List.of("*"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
-        config.setAllowCredentials(true);
+        config.setAllowCredentials(false); // Desativado para evitar conflito com origin patterns "*" em chamadas simples
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
+
         return source;
     }
 
     @Bean
-    AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
+    public AuthenticationManager authenticationManager(
+            AuthenticationConfiguration configuration
+    ) throws Exception {
         return configuration.getAuthenticationManager();
     }
 
     @Bean
-    PasswordEncoder passwordEncoder() {
+    public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 }

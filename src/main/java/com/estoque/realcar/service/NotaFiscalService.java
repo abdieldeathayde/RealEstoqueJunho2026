@@ -6,14 +6,17 @@ import com.estoque.realcar.dto.NotaFiscalRequestDTO;
 import com.estoque.realcar.dto.NotaFiscalResponseDTO;
 import com.estoque.realcar.entities.ItemNotaFiscal;
 import com.estoque.realcar.entities.NotaFiscal;
+import com.estoque.realcar.exception.ResourceNotFoundException;
 import com.estoque.realcar.repository.NotaFiscalRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -37,15 +40,13 @@ public class NotaFiscalService {
      */
     @Transactional(readOnly = true)
     public NotaFiscalResponseDTO buscarPorId(Long id) {
-
-        NotaFiscal notaFiscal = notaFiscalRepository.findById(id)
-                .orElseThrow(() -> new NoSuchElementException(
+        NotaFiscal notaFiscal = notaFiscalRepository.findByIdWithItens(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
                         "Nota Fiscal não encontrada com o ID: " + id
                 ));
 
         return converterParaResponseDTO(notaFiscal);
     }
-
     /**
      * Salva uma nova nota fiscal e seus respectivos itens.
      */
@@ -76,17 +77,10 @@ public class NotaFiscalService {
         // DADOS GERAIS
         // ==============================
 
-        notaExistente.setNumero(Integer.valueOf(dto.getNumero()));
-        notaExistente.setSerie(Integer.valueOf(dto.getSerie()));
+        if (dto.getNumero() != null) notaExistente.setNumero(Integer.valueOf(dto.getNumero()));
+        if (dto.getSerie() != null) notaExistente.setSerie(Integer.valueOf(dto.getSerie()));
         notaExistente.setNaturezaOperacao(dto.getNaturezaOperacao());
-
-        if (dto.getDataHoraEmissao() != null) {
-            notaExistente.setDataHoraEmissao(
-                    dto.getDataHoraEmissao()
-            );
-        } else {
-            notaExistente.setDataHoraEmissao(null);
-        }
+        notaExistente.setDataHoraEmissao(dto.getDataHoraEmissao());
 
         notaExistente.setRazaoSocial(dto.getRazaoSocial());
         notaExistente.setCnpjCpf(dto.getCnpjCpf());
@@ -121,22 +115,15 @@ public class NotaFiscalService {
         notaExistente.getItens().clear();
 
         if (dto.getItens() != null) {
-
             List<ItemNotaFiscal> novosItens = dto.getItens()
                     .stream()
-                    .map(itemDto ->
-                            converterItemParaEntidade(
-                                    itemDto,
-                                    notaExistente
-                            )
-                    )
+                    .map(itemDto -> converterItemParaEntidade(itemDto, notaExistente))
                     .toList();
 
             notaExistente.getItens().addAll(novosItens);
         }
 
-        NotaFiscal atualizada =
-                notaFiscalRepository.save(notaExistente);
+        NotaFiscal atualizada = notaFiscalRepository.save(notaExistente);
 
         return converterParaResponseDTO(atualizada);
     }
@@ -156,28 +143,27 @@ public class NotaFiscalService {
         notaFiscalRepository.deleteById(id);
     }
 
-// ============================================================
-// CONVERSÃO ENTITY -> RESPONSE DTO
-// ============================================================
+    // ============================================================
+    // CONVERSÃO ENTITY -> RESPONSE DTO
+    // ============================================================
 
-    private NotaFiscalResponseDTO converterParaResponseDTO(
-            NotaFiscal entidade) {
+    private NotaFiscalResponseDTO converterParaResponseDTO(NotaFiscal entidade) {
 
-        List<ItemNotaResponseDTO> itensDto =
+        List<ItemNotaResponseDTO> itensDto = (entidade.getItens() != null) ?
                 entidade.getItens()
                         .stream()
                         .map(item -> new ItemNotaResponseDTO(
-                                item.getDescricao(),
-                                item.getCodigoProduto(),
-                                item.getNcmSh(),
-                                item.getCst(),
-                                item.getCfop(),
-                                item.getUnidade(),
-                                item.getQuantidade(),
-                                item.getValorUnitario(),
-                                item.getValorTotal()
+                                item.getCodigoProduto(),    // 1º: codigo (String)
+                                item.getDescricao(),        // 2º: descricao (String)
+                                item.getNcmSh(),            // 3º: ncm (String)
+                                item.getCst(),              // 4º: cst (String)
+                                item.getCfop(),             // 5º: cfop (String)
+                                item.getUnidade(),          // 6º: unidade (String)
+                                item.getQuantidade(),       // 7º: quantidade (BigDecimal)
+                                item.getValorUnitario(),    // 8º: valorUnitario (BigDecimal)
+                                item.getValorTotal()        // 9º: valorTotal (BigDecimal)
                         ))
-                        .toList();
+                        .toList() : new ArrayList<>();
 
         return new NotaFiscalResponseDTO(
                 entidade.getId(),
@@ -209,24 +195,18 @@ public class NotaFiscalService {
         );
     }
 
-// ============================================================
-// CONVERSÃO REQUEST DTO -> ENTITY
-// ============================================================
+    // ============================================================
+    // CONVERSÃO REQUEST DTO -> ENTITY
+    // ============================================================
 
-    private NotaFiscal converterParaEntidade(
-            NotaFiscalRequestDTO dto) {
+    private NotaFiscal converterParaEntidade(NotaFiscalRequestDTO dto) {
 
         NotaFiscal notaFiscal = new NotaFiscal();
 
-        notaFiscal.setNumero(Integer.valueOf(dto.getNumero()));
-        notaFiscal.setSerie(Integer.valueOf(dto.getSerie()));
+        if (dto.getNumero() != null) notaFiscal.setNumero(Integer.valueOf(dto.getNumero()));
+        if (dto.getSerie() != null) notaFiscal.setSerie(Integer.valueOf(dto.getSerie()));
         notaFiscal.setNaturezaOperacao(dto.getNaturezaOperacao());
-
-        if (dto.getDataHoraEmissao() != null) {
-            notaFiscal.setDataHoraEmissao(
-                    dto.getDataHoraEmissao()
-            );
-        }
+        notaFiscal.setDataHoraEmissao(dto.getDataHoraEmissao());
 
         notaFiscal.setRazaoSocial(dto.getRazaoSocial());
         notaFiscal.setCnpjCpf(dto.getCnpjCpf());
@@ -239,61 +219,23 @@ public class NotaFiscalService {
         notaFiscal.setUf(dto.getUf());
         notaFiscal.setFone(dto.getFone());
 
-        notaFiscal.setBaseCalculoIcms(
-                dto.getBaseCalculoIcms()
-        );
+        notaFiscal.setBaseCalculoIcms(dto.getBaseCalculoIcms());
+        notaFiscal.setValorIcms(dto.getValorIcms());
+        notaFiscal.setBaseCalculoIcmsSt(dto.getBaseCalculoIcmsSt());
+        notaFiscal.setValorIcmsSt(dto.getValorIcmsSt());
+        notaFiscal.setValorFrete(dto.getValorFrete());
+        notaFiscal.setValorSeguro(dto.getValorSeguro());
+        notaFiscal.setDesconto(dto.getDesconto());
+        notaFiscal.setValorIpi(dto.getValorIpi());
+        notaFiscal.setValorTotalProdutos(dto.getValorTotalProdutos());
+        notaFiscal.setValorTotalNota(dto.getValorTotalNota());
 
-        notaFiscal.setValorIcms(
-                dto.getValorIcms()
-        );
-
-        notaFiscal.setBaseCalculoIcmsSt(
-                dto.getBaseCalculoIcmsSt()
-        );
-
-        notaFiscal.setValorIcmsSt(
-                dto.getValorIcmsSt()
-        );
-
-        notaFiscal.setValorFrete(
-                dto.getValorFrete()
-        );
-
-        notaFiscal.setValorSeguro(
-                dto.getValorSeguro()
-        );
-
-        notaFiscal.setDesconto(
-                dto.getDesconto()
-        );
-
-        notaFiscal.setValorIpi(
-                dto.getValorIpi()
-        );
-
-        notaFiscal.setValorTotalProdutos(
-                dto.getValorTotalProdutos()
-        );
-
-        notaFiscal.setValorTotalNota(
-                dto.getValorTotalNota()
-        );
-
-        // ==============================
         // ITENS
-        // ==============================
-
         if (dto.getItens() != null) {
-
             List<ItemNotaFiscal> itens = dto.getItens()
                     .stream()
-                    .map(itemDto ->
-                            converterItemParaEntidade(
-                                    itemDto,
-                                    notaFiscal
-                            )
-                    )
-                    .toList();
+                    .map(itemDto -> converterItemParaEntidade(itemDto, notaFiscal))
+                    .collect(Collectors.toList());
 
             notaFiscal.setItens(itens);
         }
@@ -301,9 +243,9 @@ public class NotaFiscalService {
         return notaFiscal;
     }
 
-// ============================================================
-// CONVERSÃO ITEM DTO -> ENTITY
-// ============================================================
+    // ============================================================
+    // CONVERSÃO ITEM DTO -> ENTITY
+    // ============================================================
 
     private ItemNotaFiscal converterItemParaEntidade(
             ItemNotaRequestDTO itemDto,
@@ -311,46 +253,22 @@ public class NotaFiscalService {
 
         ItemNotaFiscal item = new ItemNotaFiscal();
 
-        item.setCodigoProduto(
-                itemDto.getCodigo()
-        );
+        item.setCodigoProduto(itemDto.getCodigo());
+        item.setDescricao(itemDto.getDescricao());
+        item.setNcmSh(itemDto.getNcmSh());
+        item.setCst(itemDto.getCst());
+        item.setCfop(itemDto.getCfop());
+        item.setUnidade(itemDto.getUnidade());
 
-        item.setDescricao(
-                itemDto.getDescricao()
-        );
+        if (itemDto.getQuantidade() != null) {
+            item.setQuantidade(BigDecimal.valueOf(itemDto.getQuantidade()));
+        }
 
-        item.setNcmSh(
-                itemDto.getNcmSh()
-        );
-
-        item.setCst(
-                itemDto.getCst()
-        );
-
-        item.setCfop(
-                itemDto.getCfop()
-        );
-
-        item.setUnidade(
-                itemDto.getUnidade()
-        );
-
-        item.setQuantidade(
-                BigDecimal.valueOf(itemDto.getQuantidade())
-        );
-
-        item.setValorUnitario(
-                itemDto.getValorUnitario()
-        );
-
-        item.setValorTotal(
-                itemDto.getValorTotal()
-        );
+        item.setValorUnitario(itemDto.getValorUnitario());
+        item.setValorTotal(itemDto.getValorTotal());
 
         item.setNotaFiscal(notaFiscal);
 
         return item;
     }
-
-
 }
