@@ -18,15 +18,11 @@ public class Produto {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
     private String codigo;
 
-    @Column(nullable = false)
     private String descricao;
 
-    @Column(nullable = false)
     private Integer quantidade;
 
-    @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal valor;
 }

@@ -6,6 +6,7 @@ import com.estoque.realcar.service.ExcelImportService;
 import com.estoque.realcar.service.ProdutoService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -57,8 +58,12 @@ public class ProdutoController {
         return deletado ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
     }
 
-    @PostMapping("/importar")
+    @PostMapping(value = "/importar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> importarDePlanilha(@RequestParam("file") MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("erro", "Por favor, selecione um arquivo válido para importação."));
+        }
+
         try {
             int totalImportado = excelImportService.importarESalvar(file);
             return ResponseEntity.ok(Map.of(
@@ -66,12 +71,17 @@ public class ProdutoController {
                     "totalImportado", totalImportado
             ));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("erro", "Erro ao processar o arquivo: " + e.getMessage()));
         }
     }
 
-    @PostMapping("/importar/visualizar")
+    @PostMapping(value = "/importar/visualizar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> visualizarImportacao(@RequestParam("file") MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("erro", "Por favor, selecione um arquivo válido para pré-visualização."));
+        }
+
         try {
             List<ProdutoRequestDTO> produtos = excelImportService.importarDePlanilha(file);
             return ResponseEntity.ok(Map.of(
@@ -79,7 +89,8 @@ public class ProdutoController {
                     "produtos", produtos
             ));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("erro", "Erro ao realizar pré-visualização da planilha: " + e.getMessage()));
         }
     }
 }

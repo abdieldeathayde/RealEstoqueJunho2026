@@ -49,7 +49,7 @@ public class ProdutoService {
 
                     produto.setCodigo(
                             dto.getCodigo() != null
-                                    ? String.valueOf(dto.getCodigo())
+                                    ? (dto.getCodigo())
                                     : null
                     );
 
@@ -82,7 +82,7 @@ public class ProdutoService {
 
         produto.setCodigo(
                 dto.getCodigo() != null
-                        ? String.valueOf(dto.getCodigo())
+                        ? (dto.getCodigo())
                         : null
         );
 

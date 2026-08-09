@@ -15,9 +15,8 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class ProdutoRequestDTO {
 
-    @NotNull(message = "O código do produto é obrigatório")
-    @Min(value = 1, message = "O código deve ser maior que zero")
-    private Integer codigo;
+    @NotBlank(message = "O código do produto é obrigatório")
+    private String codigo;
 
     @NotBlank(message = "A descrição do produto é obrigatória")
     private String descricao;
@@ -33,5 +32,4 @@ public class ProdutoRequestDTO {
             message = "O valor não pode ser negativo"
     )
     private BigDecimal valor;
-
 }

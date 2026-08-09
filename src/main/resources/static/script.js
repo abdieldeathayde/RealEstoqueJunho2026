@@ -1,61 +1,62 @@
-// ==========================================================
-// DADOS
-// ==========================================================
+// ============================================================
+// ESTOQUE REALCAR - SCRIPT PRINCIPAL
+// ============================================================
 
+// Produtos carregados da API
 let products = [];
 
-// ==========================================================
-// ELEMENTOS DOM
-// ==========================================================
+// ============================================================
+// CONFIGURAÇÃO DA API
+// ============================================================
+
+const API_URL = 'http://localhost:8080/produtos';
+
+// ============================================================
+// ELEMENTOS DO DOM
+// ============================================================
 
 const productsTableBody = document.getElementById('productsTableBody');
 const emptyState = document.getElementById('emptyState');
 const searchInput = document.getElementById('searchInput');
 const lowStockFilter = document.getElementById('lowStockFilter');
 const sortSelect = document.getElementById('sortSelect');
-
 const addProductBtn = document.getElementById('addProductBtn');
 const productModal = document.getElementById('productModal');
 const deleteModal = document.getElementById('deleteModal');
 const productForm = document.getElementById('productForm');
-
 const saveProductBtn = document.getElementById('saveProduct');
 const cancelModalBtn = document.getElementById('cancelModal');
 const closeModalBtn = document.getElementById('closeModal');
-
 const confirmDeleteBtn = document.getElementById('confirmDelete');
 const cancelDeleteBtn = document.getElementById('cancelDelete');
 const closeDeleteModalBtn = document.getElementById('closeDeleteModal');
-
 const productIdInput = document.getElementById('productId');
 const productIdToDelete = document.getElementById('productIdToDelete');
-
 const prevPageBtn = document.getElementById('prevPage');
 const nextPageBtn = document.getElementById('nextPage');
 const pageNumbersContainer = document.getElementById('pageNumbers');
-
 const showingFrom = document.getElementById('showingFrom');
 const showingTo = document.getElementById('showingTo');
 const totalItems = document.getElementById('totalItems');
-
 const totalProductsEl = document.getElementById('totalProducts');
 const totalValueEl = document.getElementById('totalValue');
 const inStockProductsEl = document.getElementById('inStockProducts');
 const outOfStockProductsEl = document.getElementById('outOfStockProducts');
 
-// ==========================================================
+// ============================================================
 // PAGINAÇÃO
-// ==========================================================
+// ============================================================
 
 let currentPage = 1;
 const itemsPerPage = 5;
 let totalPages = 1;
 
-// ==========================================================
+// ============================================================
 // INICIALIZAÇÃO
-// ==========================================================
+// ============================================================
 
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('Sistema de estoque iniciado.');
 
     loadProductsFromAPI();
     setupExcelImportUI();
@@ -109,384 +110,269 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// ==========================================================
-// RENDERIZAÇÃO
-// ==========================================================
+// ============================================================
+// CARREGAR PRODUTOS DA API
+// ============================================================
+
+function loadProductsFromAPI() {
+    console.log('Carregando produtos da API...');
+
+    fetch(API_URL)
+        .then(async response => {
+            const text = await response.text();
+            console.log('Resposta da API:', text);
+
+            if (!response.ok) {
+                throw new Error(`Erro HTTP ${response.status}`);
+            }
+
+            if (!text.trim()) {
+                return [];
+            }
+
+            try {
+                return JSON.parse(text);
+            } catch (error) {
+                throw new Error('A API retornou um JSON inválido.');
+            }
+        })
+        .then(data => {
+            console.log('Produtos carregados:', data);
+
+            if (!Array.isArray(data)) {
+                throw new Error('A API não retornou uma lista de produtos.');
+            }
+
+            // Normalização dos dados do Spring
+            products = data.map(product => {
+                return {
+                    id: product.id ?? null,
+                    codigo: product.codigo != null ? String(product.codigo) : '',
+                    description: product.descricao ?? product.description ?? '',
+                    quantity: Number(product.quantidade ?? product.quantity ?? 0),
+                    price: Number(product.valor ?? product.price ?? 0)
+                };
+            });
+
+            console.log('Produtos normalizados:', products);
+            currentPage = 1;
+            filterProducts();
+            updateStats();
+        })
+        .catch(error => {
+            console.error('Erro ao carregar produtos:', error);
+            products = [];
+            filterProducts();
+            updateStats();
+            showStatusMessage('Não foi possível carregar os produtos da API.', 'error');
+        });
+}
+
+// ============================================================
+// RENDERIZAR PRODUTOS
+// ============================================================
 
 function renderProducts(filteredProducts = products) {
-
-    if (!productsTableBody) {
-        return;
-    }
+    if (!productsTableBody) return;
 
     productsTableBody.innerHTML = '';
 
     if (!filteredProducts || filteredProducts.length === 0) {
-
-        if (emptyState) {
-            emptyState.classList.remove('hidden');
-        }
-
+        if (emptyState) emptyState.classList.remove('hidden');
+        if (showingFrom) showingFrom.textContent = '0';
+        if (showingTo) showingTo.textContent = '0';
+        if (totalItems) totalItems.textContent = '0';
         return;
     }
 
-    if (emptyState) {
-        emptyState.classList.add('hidden');
-    }
+    if (emptyState) emptyState.classList.add('hidden');
 
     const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = Math.min(startIndex + itemsPerPage, filteredProducts.length);
+    const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
 
-    const endIndex = Math.min(
-        startIndex + itemsPerPage,
-        filteredProducts.length
-    );
-
-    const paginatedProducts =
-        filteredProducts.slice(startIndex, endIndex);
-
-    if (showingFrom) {
-        showingFrom.textContent = startIndex + 1;
-    }
-
-    if (showingTo) {
-        showingTo.textContent = endIndex;
-    }
-
-    if (totalItems) {
-        totalItems.textContent = filteredProducts.length;
-    }
+    if (showingFrom) showingFrom.textContent = startIndex + 1;
+    if (showingTo) showingTo.textContent = endIndex;
+    if (totalItems) totalItems.textContent = filteredProducts.length;
 
     paginatedProducts.forEach(product => {
+        const quantity = Number(product.quantity ?? 0);
+        const price = Number(product.price ?? 0);
+        const totalValue = quantity * price;
+
+        const isLowStock = quantity > 0 && quantity <= 5;
+        const isOutOfStock = quantity === 0;
 
         const row = document.createElement('tr');
-
         row.className = 'hover:bg-gray-50';
 
-        // Conversão segura dos valores
-        const quantidade =
-            Number(product.quantidade) || 0;
-
-        const valor =
-            Number(product.valor) || 0;
-
-        const totalValue =
-            quantidade * valor;
-
-        const isLowStock =
-            quantidade > 0 && quantidade <= 5;
-
-        const isOutOfStock =
-            quantidade === 0;
-
         row.innerHTML = `
-
-<td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-    ${product.codigo ?? product.id ?? ''}
-</td>
-
-<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-    ${product.descricao ?? ''}
-</td>
-
-<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-
-                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                    ${
-                        isOutOfStock
-                            ? 'bg-red-100 text-red-800'
-                            : isLowStock
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : 'bg-green-100 text-green-800'
-                    }">
-
-                    ${quantidade}
-
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                ${escapeHtml(product.id ?? '')}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                ${escapeHtml(product.codigo ?? '')}
+            </td>
+            <td class="px-6 py-4 text-sm text-gray-500">
+                ${escapeHtml(product.description ?? '')}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+            isOutOfStock
+                ? 'bg-red-100 text-red-800'
+                : isLowStock
+                    ? 'bg-yellow-100 text-yellow-800'
+                    : 'bg-green-100 text-green-800'
+        }">
+                    ${quantity}
                 </span>
-
-</td>
-
-<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-
-    R$ ${valor
-    .toFixed(2)
-    .replace('.', ',')}
-
-</td>
-
-<td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-
-    R$ ${totalValue
-    .toFixed(2)
-    .replace('.', ',')}
-
-</td>
-
-<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-
-    <div class="flex gap-2">
-
-        <button
-            class="edit-btn text-blue-500 hover:text-blue-700"
-            data-id="${product.id}">
-            <i class="fas fa-edit"></i>
-        </button>
-
-        <button
-            class="delete-btn text-red-500 hover:text-red-700"
-            data-id="${product.id}">
-            <i class="fas fa-trash"></i>
-        </button>
-
-    </div>
-
-</td>
-    `;
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                R$ ${formatCurrency(price)}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                R$ ${formatCurrency(totalValue)}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <div class="flex gap-2">
+                    <button type="button" class="edit-btn text-blue-500 hover:text-blue-700" data-id="${product.id}" title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button type="button" class="delete-btn text-red-500 hover:text-red-700" data-id="${product.id}" title="Excluir">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        `;
 
         productsTableBody.appendChild(row);
     });
 
-    document.querySelectorAll('.edit-btn').forEach(btn => {
-
-        btn.addEventListener('click', event => {
-
-            const productId =
-                Number(event.currentTarget.dataset.id);
-
-            openEditModal(productId);
+    // Eventos Botoes Editar
+    document.querySelectorAll('.edit-btn').forEach(button => {
+        button.addEventListener('click', event => {
+            const id = event.currentTarget.getAttribute('data-id');
+            openEditModal(id);
         });
     });
 
-    document.querySelectorAll('.delete-btn').forEach(btn => {
-
-        btn.addEventListener('click', event => {
-
-            const productId =
-                Number(event.currentTarget.dataset.id);
-
-            openDeleteModal(productId);
+    // Eventos Botoes Excluir
+    document.querySelectorAll('.delete-btn').forEach(button => {
+        button.addEventListener('click', event => {
+            const id = event.currentTarget.getAttribute('data-id');
+            openDeleteModal(id);
         });
     });
 }
 
-// ==========================================================
+// ============================================================
 // ESTATÍSTICAS
-// ==========================================================
+// ============================================================
 
 function updateStats() {
-
     const totalProducts = products.length;
+    const totalValue = products.reduce((sum, product) => {
+        const quantity = Number(product.quantity ?? 0);
+        const price = Number(product.price ?? 0);
+        return sum + (quantity * price);
+    }, 0);
 
-    const totalValue = products.reduce(
-        (sum, product) => {
+    const inStockProducts = products.filter(p => Number(p.quantity ?? 0) > 0).length;
+    const outOfStockProducts = products.filter(p => Number(p.quantity ?? 0) === 0).length;
 
-            const quantidade =
-                Number(product.quantidade) || 0;
-
-            const valor =
-                Number(product.valor) || 0;
-
-            return sum + (quantidade * valor);
-
-        },
-        0
-    );
-
-    const inStockProducts =
-        products.filter(
-            product => Number(product.quantidade) > 0
-        ).length;
-
-    const outOfStockProducts =
-        products.filter(
-            product => Number(product.quantidade) === 0
-        ).length;
-
-    if (totalProductsEl) {
-        totalProductsEl.textContent = totalProducts;
-    }
-
-    if (totalValueEl) {
-
-        totalValueEl.textContent =
-            `R$ ${totalValue.toFixed(2).replace('.', ',')}`;
-    }
-
-    if (inStockProductsEl) {
-        inStockProductsEl.textContent =
-            inStockProducts;
-    }
-
-    if (outOfStockProductsEl) {
-        outOfStockProductsEl.textContent =
-            outOfStockProducts;
-    }
+    if (totalProductsEl) totalProductsEl.textContent = totalProducts;
+    if (totalValueEl) totalValueEl.textContent = `R$ ${formatCurrency(totalValue)}`;
+    if (inStockProductsEl) inStockProductsEl.textContent = inStockProducts;
+    if (outOfStockProductsEl) outOfStockProductsEl.textContent = outOfStockProducts;
 }
 
-// ==========================================================
-// FILTRO E ORDENAÇÃO
-// ==========================================================
+// ============================================================
+// FILTRAR PRODUTOS
+// ============================================================
 
 function filterProducts() {
-
-    const searchTerm =
-        searchInput
-            ? searchInput.value.toLowerCase().trim()
-            : '';
-
-    const sortBy =
-        sortSelect
-            ? sortSelect.value
-            : 'id';
-
-    const showLowStock =
-        lowStockFilter
-            ? lowStockFilter.checked
-            : false;
+    const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    const showLowStock = lowStockFilter ? lowStockFilter.checked : false;
+    const sortBy = sortSelect ? sortSelect.value : 'id';
 
     let filtered = products.filter(product => {
-
-        const descricao =
-            String(product.descricao ?? '')
-                .toLowerCase();
-
-        const codigo =
-            String(product.codigo ?? '');
-
-        const id =
-            String(product.id ?? '');
+        const codigo = String(product.codigo ?? '').toLowerCase();
+        const description = String(product.description ?? '').toLowerCase();
+        const id = String(product.id ?? '');
 
         return (
-            descricao.includes(searchTerm) ||
             codigo.includes(searchTerm) ||
+            description.includes(searchTerm) ||
             id.includes(searchTerm)
         );
     });
 
     if (showLowStock) {
-
         filtered = filtered.filter(product => {
-
-            const quantidade =
-                Number(product.quantidade) || 0;
-
-            return quantidade > 0 &&
-                   quantidade <= 5;
+            const quantity = Number(product.quantity ?? 0);
+            return quantity > 0 && quantity <= 5;
         });
     }
 
     filtered.sort((a, b) => {
-
-        const aDescricao =
-            String(a.descricao ?? '');
-
-        const bDescricao =
-            String(b.descricao ?? '');
-
-        const aQuantidade =
-            Number(a.quantidade) || 0;
-
-        const bQuantidade =
-            Number(b.quantidade) || 0;
-
-        const aValor =
-            Number(a.valor) || 0;
-
-        const bValor =
-            Number(b.valor) || 0;
-
-        if (sortBy === 'id') {
-            return Number(a.id) - Number(b.id);
+        switch (sortBy) {
+            case 'id':
+                return Number(a.id ?? 0) - Number(b.id ?? 0);
+            case 'name':
+                return String(a.description ?? '').localeCompare(String(b.description ?? ''));
+            case 'quantity':
+                return Number(a.quantity ?? 0) - Number(b.quantity ?? 0);
+            case 'price':
+                return Number(a.price ?? 0) - Number(b.price ?? 0);
+            default:
+                return 0;
         }
-
-        if (sortBy === 'name') {
-            return aDescricao.localeCompare(bDescricao);
-        }
-
-        if (sortBy === 'quantity') {
-            return aQuantidade - bQuantidade;
-        }
-
-        if (sortBy === 'price') {
-            return aValor - bValor;
-        }
-
-        return 0;
     });
 
-    totalPages =
-        Math.ceil(filtered.length / itemsPerPage);
-
-    if (totalPages === 0) {
-        currentPage = 1;
-    } else if (currentPage > totalPages) {
-        currentPage = totalPages;
-    }
+    totalPages = Math.ceil(filtered.length / itemsPerPage);
+    if (totalPages < 1) totalPages = 1;
+    if (currentPage > totalPages) currentPage = totalPages;
 
     renderProducts(filtered);
     renderPagination();
 }
 
-// ==========================================================
+// ============================================================
 // PAGINAÇÃO
-// ==========================================================
+// ============================================================
 
 function renderPagination() {
-
-    if (!pageNumbersContainer) {
-        return;
-    }
+    if (!pageNumbersContainer) return;
 
     pageNumbersContainer.innerHTML = '';
 
-    if (prevPageBtn) {
-        prevPageBtn.disabled = currentPage === 1;
-    }
+    if (prevPageBtn) prevPageBtn.disabled = currentPage === 1;
+    if (nextPageBtn) nextPageBtn.disabled = currentPage === totalPages || products.length === 0;
 
-    if (nextPageBtn) {
-        nextPageBtn.disabled =
-            currentPage === totalPages ||
-            totalPages === 0;
-    }
-
-    if (totalPages === 0) {
-        return;
-    }
+    if (products.length === 0) return;
 
     addPageNumber(1);
 
     if (currentPage > 3) {
-
-        const ellipsis =
-            document.createElement('span');
-
+        const ellipsis = document.createElement('span');
         ellipsis.className = 'px-3 py-1';
         ellipsis.textContent = '...';
-
         pageNumbersContainer.appendChild(ellipsis);
     }
 
-    const startPage =
-        Math.max(2, currentPage - 1);
+    const startPage = Math.max(2, currentPage - 1);
+    const endPage = Math.min(totalPages - 1, currentPage + 1);
 
-    const endPage =
-        Math.min(totalPages - 1, currentPage + 1);
-
-    for (
-        let i = startPage;
-        i <= endPage;
-        i++
-    ) {
-        addPageNumber(i);
+    for (let page = startPage; page <= endPage; page++) {
+        if (page > 1 && page < totalPages) {
+            addPageNumber(page);
+        }
     }
 
     if (currentPage < totalPages - 2) {
-
-        const ellipsis =
-            document.createElement('span');
-
+        const ellipsis = document.createElement('span');
         ellipsis.className = 'px-3 py-1';
         ellipsis.textContent = '...';
-
         pageNumbersContainer.appendChild(ellipsis);
     }
 
@@ -496,23 +382,17 @@ function renderPagination() {
 }
 
 function addPageNumber(page) {
-
-    const pageBtn =
-        document.createElement('button');
-
-    pageBtn.className =
-        `px-3 py-1 rounded-lg ${
-    currentPage === page
-        ? 'bg-blue-500 text-white'
-        : 'border border-gray-300 hover:bg-gray-100'
-}`;
-
+    const pageBtn = document.createElement('button');
+    pageBtn.type = 'button';
+    pageBtn.className = `px-3 py-1 rounded-lg ${
+        currentPage === page
+            ? 'bg-blue-500 text-white'
+            : 'border border-gray-300 hover:bg-gray-100'
+    }`;
     pageBtn.textContent = page;
 
     pageBtn.addEventListener('click', () => {
-
         currentPage = page;
-
         filterProducts();
     });
 
@@ -520,891 +400,451 @@ function addPageNumber(page) {
 }
 
 function goToPrevPage() {
-
     if (currentPage > 1) {
-
         currentPage--;
-
         filterProducts();
     }
 }
 
 function goToNextPage() {
-
     if (currentPage < totalPages) {
-
         currentPage++;
-
         filterProducts();
     }
 }
 
-// ==========================================================
-// MODAIS
-// ==========================================================
+// ============================================================
+// MODAL - ADICIONAR / EDITAR
+// ============================================================
 
 function openAddModal() {
+    if (!productModal) return;
 
-    document.getElementById('modalTitle').textContent =
-        'Adicionar Produto';
-
-    productIdInput.value = '';
-
-    productForm.reset();
+    const modalTitle = document.getElementById('modalTitle');
+    if (modalTitle) modalTitle.textContent = 'Adicionar Produto';
+    if (productIdInput) productIdInput.value = '';
+    if (productForm) productForm.reset();
 
     productModal.classList.remove('hidden');
 }
 
 function openEditModal(productId) {
-
-    const product =
-        products.find(
-            p => Number(p.id) === Number(productId)
-        );
+    const product = products.find(p => String(p.id) === String(productId));
 
     if (!product) {
+        console.error('Produto não encontrado:', productId);
         return;
     }
 
-    document.getElementById('modalTitle').textContent =
-        'Editar Produto';
+    const modalTitle = document.getElementById('modalTitle');
+    if (modalTitle) modalTitle.textContent = 'Editar Produto';
+    if (productIdInput) productIdInput.value = product.id;
 
-    productIdInput.value = product.id;
+    const productCode = document.getElementById('productCode');
+    const productDescription = document.getElementById('productDescription');
+    const productQuantity = document.getElementById('productQuantity');
+    const productPrice = document.getElementById('productPrice');
 
-    document.getElementById(
-        'productDescription'
-    ).value = product.descricao ?? '';
+    if (productCode) productCode.value = product.codigo ?? '';
+    if (productDescription) productDescription.value = product.description ?? '';
+    if (productQuantity) productQuantity.value = product.quantity ?? 0;
+    if (productPrice) productPrice.value = product.price ?? 0;
 
-    document.getElementById(
-        'productQuantity'
-    ).value = product.quantidade ?? 0;
-
-    document.getElementById(
-        'productPrice'
-    ).value = product.valor ?? 0;
-
-    productModal.classList.remove('hidden');
+    if (productModal) productModal.classList.remove('hidden');
 }
 
 function closeModal() {
-
-    if (productModal) {
-        productModal.classList.add('hidden');
-    }
+    if (productModal) productModal.classList.add('hidden');
 }
 
+// ============================================================
+// MODAL EXCLUSÃO
+// ============================================================
+
 function openDeleteModal(productId) {
-
-    productIdToDelete.value = productId;
-
-    deleteModal.classList.remove('hidden');
+    if (productIdToDelete) productIdToDelete.value = productId;
+    if (deleteModal) deleteModal.classList.remove('hidden');
 }
 
 function closeDeleteModal() {
-
-    if (deleteModal) {
-        deleteModal.classList.add('hidden');
-    }
+    if (deleteModal) deleteModal.classList.add('hidden');
 }
 
-// ==========================================================
+// ============================================================
 // SALVAR PRODUTO
-// ==========================================================
+// ============================================================
 
-function saveProduct() {
+async function saveProduct() {
+    if (!productForm) return;
 
     if (!productForm.checkValidity()) {
-
         productForm.reportValidity();
-
         return;
     }
 
-    const id =
-        productIdInput.value
-            ? Number(productIdInput.value)
-            : null;
+    const id = productIdInput && productIdInput.value ? productIdInput.value : null;
+    const codeElement = document.getElementById('productCode');
+    const descriptionElement = document.getElementById('productDescription');
+    const quantityElement = document.getElementById('productQuantity');
+    const priceElement = document.getElementById('productPrice');
 
     const payload = {
-
-        // IMPORTANTE:
-        // Os nomes devem ser iguais aos campos
-        // do ProdutoRequestDTO.
-
-        codigo: id ?? 0,
-
-        descricao:
-            document.getElementById(
-                'productDescription'
-            ).value.trim(),
-
-        quantidade:
-            Number(
-                document.getElementById(
-                    'productQuantity'
-                ).value
-            ),
-
-        valor:
-            Number(
-                document.getElementById(
-                    'productPrice'
-                ).value
-            )
+        codigo: codeElement ? codeElement.value.trim() : '',
+        descricao: descriptionElement ? descriptionElement.value.trim() : '',
+        quantidade: quantityElement ? parseInt(quantityElement.value, 10) : 0,
+        valor: priceElement ? parseFloat(priceElement.value.replace(',', '.')) : 0
     };
 
-    const url =
-        id
-            ? `http://localhost:8080/produtos/${id}`
-    : 'http://localhost:8080/produtos';
+    const url = id ? `${API_URL}/${id}` : API_URL;
+    const method = id ? 'PUT' : 'POST';
 
-const method =
-    id ? 'PUT' : 'POST';
+    try {
+        const response = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
 
-fetch(url, {
-
-    method: method,
-
-    headers: {
-        'Content-Type': 'application/json'
-    },
-
-    body: JSON.stringify(payload)
-
-})
-
-    .then(async response => {
-
-        const text =
-            await response.text();
+        const text = await response.text();
 
         if (!response.ok) {
-
-            throw new Error(
-                text || 'Erro ao salvar produto'
-            );
+            throw new Error(text || `Erro HTTP ${response.status}`);
         }
 
-        return text
-            ? JSON.parse(text)
-            : {};
-    })
-
-    .then(() => {
-
-        alert(
-            id
-                ? 'Produto atualizado com sucesso!'
-                : 'Produto cadastrado com sucesso!'
-        );
-
+        alert(id ? 'Produto atualizado com sucesso!' : 'Produto cadastrado com sucesso!');
         closeModal();
+        await loadProductsFromAPI();
 
-        loadProductsFromAPI();
-    })
-
-    .catch(error => {
-
-        console.error(
-            'Erro ao salvar produto:',
-            error
-        );
-
-        alert(error.message);
-    });
+    } catch (error) {
+        console.error('Erro ao salvar produto:', error);
+        alert(`Erro ao salvar produto: ${error.message}`);
+    }
 }
 
-// ==========================================================
+// ============================================================
 // EXCLUIR PRODUTO
-// ==========================================================
+// ============================================================
 
-function deleteProduct() {
+async function deleteProduct() {
+    if (!productIdToDelete) return;
+    const productId = productIdToDelete.value;
+    if (!productId) return;
 
-    const productId =
-        Number(productIdToDelete.value);
-
-    fetch(
-        `http://localhost:8080/produtos/${productId}`,
-        {
+    try {
+        const response = await fetch(`${API_URL}/${productId}`, {
             method: 'DELETE'
+        });
+
+        if (!response.ok) {
+            const text = await response.text();
+            throw new Error(text || `Erro HTTP ${response.status}`);
         }
-    )
 
-        .then(response => {
+        alert('Produto excluído com sucesso!');
+        closeDeleteModal();
+        await loadProductsFromAPI();
 
-            if (!response.ok) {
-
-                throw new Error(
-                    'Erro ao excluir produto'
-                );
-            }
-
-            alert(
-                'Produto excluído com sucesso!'
-            );
-
-            closeDeleteModal();
-
-            loadProductsFromAPI();
-        })
-
-        .catch(error => {
-
-            console.error(error);
-
-            alert(error.message);
-        });
+    } catch (error) {
+        console.error('Erro ao excluir produto:', error);
+        alert(`Erro ao excluir produto: ${error.message}`);
+    }
 }
 
-// ==========================================================
-// CARREGAR PRODUTOS DA API
-// ==========================================================
-
-function loadProductsFromAPI() {
-
-    fetch('http://localhost:8080/produtos')
-
-        .then(async response => {
-
-            const text =
-                await response.text();
-
-            if (!response.ok) {
-
-                throw new Error(
-                    `HTTP ${response.status}`
-                );
-            }
-
-            if (!text.trim()) {
-
-                products = [];
-
-                currentPage = 1;
-
-                filterProducts();
-
-                updateStats();
-
-                return [];
-            }
-
-            return JSON.parse(text);
-        })
-
-        .then(data => {
-
-            if (!Array.isArray(data)) {
-
-                console.error(
-                    'A API não retornou uma lista:',
-                    data
-                );
-
-                products = [];
-
-                filterProducts();
-
-                updateStats();
-
-                return;
-            }
-
-            /*
-             * Converte o JSON do Spring para
-             * o padrão usado pelo JavaScript.
-             *
-             * Backend:
-             *
-             * {
-             *   id,
-             *   codigo,
-             *   descricao,
-             *   quantidade,
-             *   valor
-             * }
-             */
-
-            products = data.map(product => ({
-
-                id: product.id,
-
-                codigo: product.codigo,
-
-                descricao: product.descricao ?? '',
-
-                quantidade:
-                    Number(product.quantidade) || 0,
-
-                valor:
-                    Number(product.valor) || 0
-            }));
-
-            console.log(
-                'Produtos carregados:',
-                products
-            );
-
-            currentPage = 1;
-
-            filterProducts();
-
-            updateStats();
-        })
-
-        .catch(error => {
-
-            console.error(
-                'Erro ao carregar produtos:',
-                error
-            );
-
-            products = [];
-
-            filterProducts();
-
-            updateStats();
-        });
-}
-
-// ==========================================================
-// IMPORTAÇÃO EXCEL
-// ==========================================================
+// ============================================================
+// IMPORTAÇÃO EXCEL UI & EVENTOS
+// ============================================================
 
 function setupExcelImportUI() {
-
-    const toggleBtn =
-        document.getElementById(
-            'toggleImportBtn'
-        );
-
-    const importSection =
-        document.getElementById(
-            'importSection'
-        );
-
-    const arquivoExcel =
-        document.getElementById(
-            'arquivoExcel'
-        );
-
-    const importBtn =
-        document.getElementById(
-            'importBtn'
-        );
-
-    const confirmImportBtn =
-        document.getElementById(
-            'confirmImportBtn'
-        );
-
-    const cancelImportBtn =
-        document.getElementById(
-            'cancelImportBtn'
-        );
+    const toggleBtn = document.getElementById('toggleImportBtn');
+    const importSection = document.getElementById('importSection');
+    const arquivoExcel = document.getElementById('arquivoExcel');
+    const importBtn = document.getElementById('importBtn');
+    const confirmImportBtn = document.getElementById('confirmImportBtn');
+    const cancelImportBtn = document.getElementById('cancelImportBtn');
 
     if (toggleBtn) {
-
-        toggleBtn.addEventListener(
-            'click',
-            () => {
-
-                importSection.classList.toggle(
-                    'hidden'
-                );
-
-                const icon =
-                    toggleBtn.querySelector('i');
-
-                if (icon) {
-
-                    icon.classList.toggle(
-                        'fa-chevron-down'
-                    );
-
-                    icon.classList.toggle(
-                        'fa-chevron-up'
-                    );
-                }
+        toggleBtn.addEventListener('click', () => {
+            if (importSection) importSection.classList.toggle('hidden');
+            const icon = toggleBtn.querySelector('i');
+            if (icon) {
+                icon.classList.toggle('fa-chevron-down');
+                icon.classList.toggle('fa-chevron-up');
             }
-        );
+        });
     }
 
     if (arquivoExcel) {
-
-        arquivoExcel.addEventListener(
-            'change',
-            handleFileSelect
-        );
+        arquivoExcel.addEventListener('change', handleFileSelect);
     }
 
     if (importBtn) {
-
-        importBtn.addEventListener(
-            'click',
-            event => {
-
-                event.preventDefault();
-
-                const file =
-                    arquivoExcel.files[0];
-
-                if (file) {
-
-                    visualizarImportacao(file);
-
-                } else {
-
-                    showStatusMessage(
-                        'Selecione um arquivo Excel',
-                        'error'
-                    );
-                }
+        importBtn.addEventListener('click', event => {
+            event.preventDefault();
+            if (!arquivoExcel) return;
+            const file = arquivoExcel.files[0];
+            if (!file) {
+                showStatusMessage('Selecione um arquivo Excel.', 'error');
+                return;
             }
-        );
+            visualizarImportacao(file);
+        });
     }
 
     if (confirmImportBtn) {
-
-        confirmImportBtn.addEventListener(
-            'click',
-            () => {
-
-                const file =
-                    arquivoExcel.files[0];
-
-                if (file) {
-                    realizarImportacao(file);
-                }
+        confirmImportBtn.addEventListener('click', () => {
+            if (!arquivoExcel) return;
+            const file = arquivoExcel.files[0];
+            if (!file) {
+                showStatusMessage('Selecione um arquivo Excel.', 'error');
+                return;
             }
-        );
+            realizarImportacao(file);
+        });
     }
 
     if (cancelImportBtn) {
-
-        cancelImportBtn.addEventListener(
-            'click',
-            () => {
-
-                document
-                    .getElementById(
-                        'previewContainer'
-                    )
-                    .classList.add('hidden');
-
-                arquivoExcel.value = '';
-
-                showStatusMessage('', '');
-            }
-        );
+        cancelImportBtn.addEventListener('click', () => {
+            const previewContainer = document.getElementById('previewContainer');
+            if (previewContainer) previewContainer.classList.add('hidden');
+            if (arquivoExcel) arquivoExcel.value = '';
+            showStatusMessage('', '');
+        });
     }
 }
 
 function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
 
-    const file =
-        event.target.files[0];
-
-    if (!file) {
-        return;
-    }
-
-    if (
-        !file.name.endsWith('.xlsx') &&
-        !file.name.endsWith('.xls')
-    ) {
-
-        showStatusMessage(
-            'Selecione um arquivo Excel válido (.xlsx ou .xls)',
-            'error'
-        );
-
+    const fileName = file.name.toLowerCase();
+    if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
+        showStatusMessage('Selecione um arquivo Excel válido (.xlsx ou .xls).', 'error');
         event.target.value = '';
-
         return;
     }
 
     if (file.size > 10 * 1024 * 1024) {
-
-        showStatusMessage(
-            'Arquivo muito grande (máximo 10MB)',
-            'error'
-        );
-
+        showStatusMessage('Arquivo muito grande. O limite é 10MB.', 'error');
         event.target.value = '';
-
         return;
     }
 
-    showStatusMessage(
-        'Arquivo selecionado: ' + file.name,
-        'info'
-    );
+    showStatusMessage(`Arquivo selecionado: ${file.name}`, 'info');
 }
 
-function visualizarImportacao(file) {
+// ============================================================
+// VISUALIZAR IMPORTAÇÃO EXCEL
+// ============================================================
 
-    const formData =
-        new FormData();
+async function visualizarImportacao(file) {
+    const formData = new FormData();
+    formData.append('file', file);
 
-    formData.append(
-        'file',
-        file
-    );
+    showStatusMessage('Processando arquivo Excel...', 'info');
 
-    showStatusMessage(
-        'Processando arquivo...',
-        'info'
-    );
-
-    fetch(
-        'http://localhost:8080/produtos/importar/visualizar',
-        {
+    try {
+        const response = await fetch(`${API_URL}/importar/visualizar`, {
             method: 'POST',
             body: formData
+        });
+
+        const text = await response.text();
+        let data;
+
+        try {
+            data = text ? JSON.parse(text) : {};
+        } catch {
+            throw new Error('O servidor retornou uma resposta inválida.');
         }
-    )
 
-        .then(response => response.json())
+        if (!response.ok) {
+            throw new Error(data.erro || data.message || `Erro HTTP ${response.status}`);
+        }
 
-        .then(data => {
+        if (data.erro) {
+            showStatusMessage(`Erro: ${data.erro}`, 'error');
+            return;
+        }
 
-            if (data.erro) {
+        console.log('Pré-visualização:', data);
+        const produtos = data.produtos ?? data.produtosImportados ?? data ?? [];
 
-                showStatusMessage(
-                    'Erro: ' + data.erro,
-                    'error'
-                );
+        displayPreviewTable(produtos);
 
-                return;
-            }
+        showStatusMessage(
+            `<strong>${produtos.length} produto(s) encontrado(s)</strong><br>` +
+            'Revise os dados abaixo e confirme a importação.',
+            'success'
+        );
 
-            displayPreviewTable(
-                data.produtos
-            );
+        const previewContainer = document.getElementById('previewContainer');
+        if (previewContainer) {
+            previewContainer.classList.remove('hidden');
+        }
+
+    } catch (error) {
+        console.error('Erro ao visualizar Excel:', error);
+        showStatusMessage(`Erro ao processar arquivo: ${error.message}`, 'error');
+    }
+}
+
+// ============================================================
+// REALIZAR IMPORTAÇÃO DEFINITIVA
+// ============================================================
+
+async function realizarImportacao(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    showStatusMessage('Importando produtos...', 'info');
+
+    const confirmBtn = document.getElementById('confirmImportBtn');
+    if (confirmBtn) confirmBtn.disabled = true;
+
+    try {
+        const response = await fetch(`${API_URL}/importar`, {
+            method: 'POST',
+            body: formData
+        });
+
+        const text = await response.text();
+        let data;
+
+        try {
+            data = text ? JSON.parse(text) : {};
+        } catch {
+            throw new Error('O servidor retornou uma resposta inválida.');
+        }
+
+        if (!response.ok) {
+            throw new Error(data.erro || data.message || `Erro HTTP ${response.status}`);
+        }
+
+        console.log('Resultado da importação:', data);
+
+        if (
+            data.sucesso === true ||
+            data.totalImportado !== undefined ||
+            data.quantidadeImportada !== undefined ||
+            response.ok
+        ) {
+            const total = data.totalImportado ?? data.quantidadeImportada ?? data.total ?? 0;
 
             showStatusMessage(
-                `<strong>${data.total} produto(s) encontrado(s)</strong><br>
-             Revise os dados abaixo e confirme a importação`,
+                `<strong>Importação concluída!</strong><br>` +
+                `${total} produto(s) importado(s) com sucesso.`,
                 'success'
             );
 
-            document
-                .getElementById(
-                    'previewContainer'
-                )
-                .classList.remove('hidden');
-        })
+            const arquivoExcel = document.getElementById('arquivoExcel');
+            if (arquivoExcel) arquivoExcel.value = '';
 
-        .catch(error => {
+            const previewContainer = document.getElementById('previewContainer');
+            if (previewContainer) previewContainer.classList.add('hidden');
 
-            console.error(
-                'Erro:',
-                error
-            );
+            await loadProductsFromAPI();
 
+        } else {
             showStatusMessage(
-                'Erro ao processar arquivo: ' +
-                error.message,
+                `Erro: ${data.erro || data.message || 'Falha ao importar produtos.'}`,
                 'error'
             );
-        });
-}
-
-function realizarImportacao(file) {
-
-    const formData =
-        new FormData();
-
-    formData.append(
-        'file',
-        file
-    );
-
-    showStatusMessage(
-        'Importando produtos...',
-        'info'
-    );
-
-    const confirmBtn =
-        document.getElementById(
-            'confirmImportBtn'
-        );
-
-    if (confirmBtn) {
-        confirmBtn.disabled = true;
-    }
-
-    fetch(
-        'http://localhost:8080/produtos/importar',
-        {
-            method: 'POST',
-            body: formData
         }
-    )
 
-        .then(response => response.json())
+    } catch (error) {
+        console.error('Erro ao importar Excel:', error);
+        showStatusMessage(`Erro ao importar: ${error.message}`, 'error');
 
-        .then(data => {
-
-            if (
-                data.sucesso ||
-                data.totalImportado !== undefined
-            ) {
-
-                const total =
-                    data.totalImportado ?? 'vários';
-
-                showStatusMessage(
-                    `<strong>Importação concluída!</strong><br>
-                 ${total} produto(s) importado(s) com sucesso.`,
-                    'success'
-                );
-
-                document
-                    .getElementById(
-                        'arquivoExcel'
-                    )
-                    .value = '';
-
-                document
-                    .getElementById(
-                        'previewContainer'
-                    )
-                    .classList.add('hidden');
-
-                setTimeout(
-                    loadProductsFromAPI,
-                    500
-                );
-
-            } else {
-
-                showStatusMessage(
-                    'Erro: ' +
-                    (data.erro || 'Falha ao importar'),
-                    'error'
-                );
-            }
-        })
-
-        .catch(error => {
-
-            console.error(
-                'Erro:',
-                error
-            );
-
-            showStatusMessage(
-                'Erro ao importar: ' +
-                error.message,
-                'error'
-            );
-        })
-
-        .finally(() => {
-
-            if (confirmBtn) {
-                confirmBtn.disabled = false;
-            }
-        });
+    } finally {
+        if (confirmBtn) confirmBtn.disabled = false;
+    }
 }
 
-// ==========================================================
-// PRÉ-VISUALIZAÇÃO DO EXCEL
-// ==========================================================
+// ============================================================
+// TABELA DE PRÉ-VISUALIZAÇÃO DE IMPORTAÇÃO
+// ============================================================
 
 function displayPreviewTable(produtos) {
+    const table = document.getElementById('previewTable');
+    if (!table) return;
 
-    const table =
-        document.getElementById(
-            'previewTable'
-        );
+    const thead = table.querySelector('thead tr');
+    const tbody = table.querySelector('tbody');
 
-    if (!table) {
-        return;
-    }
-
-    const thead =
-        table.querySelector(
-            'thead tr'
-        );
-
-    const tbody =
-        table.querySelector(
-            'tbody'
-        );
+    if (!thead || !tbody) return;
 
     thead.innerHTML = '';
     tbody.innerHTML = '';
 
-    if (
-        !produtos ||
-        produtos.length === 0
-    ) {
-
-        showStatusMessage(
-            'Nenhum produto encontrado no arquivo',
-            'warning'
-        );
-
+    if (!Array.isArray(produtos) || produtos.length === 0) {
+        showStatusMessage('Nenhum produto encontrado no arquivo.', 'warning');
         return;
     }
 
-    const headers = [
-        'Código',
-        'Descrição',
-        'Quantidade',
-        'Valor'
-    ];
-
-    headers.forEach(header => {
-
-        const th =
-            document.createElement('th');
-
-        th.textContent = header;
-
-        th.className =
-            'px-6 py-3 text-left text-xs font-semibold text-gray-700 bg-gray-100';
-
-        thead.appendChild(th);
-    });
-
-    produtos.forEach((produto, index) => {
-
-        const tr =
-            document.createElement('tr');
-
-        tr.className =
-            index % 2 === 0
-                ? 'bg-white hover:bg-gray-50'
-                : 'bg-gray-50 hover:bg-white';
-
-        const codigoTd =
-            document.createElement('td');
-
-        codigoTd.textContent =
-            produto.codigo ?? '';
-
-        codigoTd.className =
-            'px-6 py-4 text-sm text-gray-900';
-
-        tr.appendChild(codigoTd);
-
-        const descricaoTd =
-            document.createElement('td');
-
-        descricaoTd.textContent =
-            produto.descricao ?? '';
-
-        descricaoTd.className =
-            'px-6 py-4 text-sm text-gray-900';
-
-        tr.appendChild(descricaoTd);
-
-        const quantidadeTd =
-            document.createElement('td');
-
-        quantidadeTd.textContent =
-            produto.quantidade ?? 0;
-
-        quantidadeTd.className =
-            'px-6 py-4 text-sm text-gray-900 font-semibold';
-
-        tr.appendChild(quantidadeTd);
-
-        const valorTd =
-            document.createElement('td');
-
-        const valor =
-            Number(produto.valor) || 0;
-
-        valorTd.textContent =
-            'R$ ' +
-            valor.toLocaleString(
-                'pt-BR',
-                {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                }
-            );
-
-        valorTd.className =
-            'px-6 py-4 text-sm text-gray-900 font-semibold';
-
-        tr.appendChild(valorTd);
-
-        tbody.appendChild(tr);
-    });
-}
-
-// ==========================================================
-// MENSAGENS
-// ==========================================================
-
-function showStatusMessage(
-    message,
-    type
-) {
-
-    const container =
-        document.getElementById(
-            'statusMessage'
-        );
-
-    if (!container) {
-        return;
-    }
-
-    if (!message) {
-
-        container.classList.add(
-            'hidden'
-        );
-
-        return;
-    }
-
-    let bgColor =
-        'bg-blue-50 border-blue-200 text-blue-800';
-
-    let icon =
-        'fa-info-circle';
-
-    if (type === 'success') {
-
-        bgColor =
-            'bg-green-50 border-green-200 text-green-800';
-
-        icon =
-            'fa-check-circle';
-
-    } else if (type === 'error') {
-
-        bgColor =
-            'bg-red-50 border-red-200 text-red-800';
-
-        icon =
-            'fa-exclamation-circle';
-
-    } else if (type === 'warning') {
-
-        bgColor =
-            'bg-yellow-50 border-yellow-200 text-yellow-800';
-
-        icon =
-            'fa-exclamation-triangle';
-    }
-
-    container.className =
-        `${bgColor} border rounded-lg p-4 flex items-start gap-3`;
-
-    container.innerHTML = `
-        <i class="fas ${icon} text-xl flex-shrink-0 mt-0.5"></i>
-        <div class="flex-grow">${message}</div>
+    thead.innerHTML = `
+        <th class="px-4 py-2 border bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase">Código</th>
+        <th class="px-4 py-2 border bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase">Descrição</th>
+        <th class="px-4 py-2 border bg-gray-100 text-center text-xs font-semibold text-gray-600 uppercase">Qtd</th>
+        <th class="px-4 py-2 border bg-gray-100 text-right text-xs font-semibold text-gray-600 uppercase">Preço Unit.</th>
     `;
 
-    container.classList.remove('hidden');
+    produtos.forEach(item => {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-gray-50';
+
+        const codigo = escapeHtml(item.codigo ?? item.code ?? '');
+        const descricao = escapeHtml(item.descricao ?? item.description ?? '');
+        const quantidade = Number(item.quantidade ?? item.quantity ?? 0);
+        const valor = Number(item.valor ?? item.price ?? 0);
+
+        row.innerHTML = `
+            <td class="px-4 py-2 border text-sm text-gray-700">${codigo}</td>
+            <td class="px-4 py-2 border text-sm text-gray-700">${descricao}</td>
+            <td class="px-4 py-2 border text-sm text-center text-gray-700">${quantidade}</td>
+            <td class="px-4 py-2 border text-sm text-right text-gray-700">R$ ${formatCurrency(valor)}</td>
+        `;
+
+        tbody.appendChild(row);
+    });
 }
 
+// ============================================================
+// FUNÇÕES UTILITÁRIAS
+// ============================================================
+
+function showStatusMessage(message, type = 'info') {
+    const statusEl = document.getElementById('statusMessage');
+    if (!statusEl) return;
+
+    if (!message) {
+        statusEl.innerHTML = '';
+        statusEl.className = 'hidden';
+        return;
+    }
+
+    statusEl.innerHTML = message;
+
+    const styles = {
+        info: 'p-3 rounded bg-blue-50 text-blue-700 border border-blue-200 text-sm mb-4',
+        success: 'p-3 rounded bg-green-50 text-green-700 border border-green-200 text-sm mb-4',
+        error: 'p-3 rounded bg-red-50 text-red-700 border border-red-200 text-sm mb-4',
+        warning: 'p-3 rounded bg-yellow-50 text-yellow-700 border border-yellow-200 text-sm mb-4'
+    };
+
+    statusEl.className = styles[type] || styles.info;
+}
+
+function escapeHtml(str) {
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+function formatCurrency(value) {
+    return Number(value).toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
