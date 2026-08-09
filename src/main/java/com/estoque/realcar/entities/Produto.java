@@ -1,32 +1,32 @@
 package com.estoque.realcar.entities;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 
 @Entity
-@Getter
-@Setter
-@NoArgsConstructor
 @Table(name = "produtos")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class Produto {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "nome", nullable = false)
-    private String nome;
+    @Column(nullable = false)
+    private String codigo;
 
-    @Column(name = "descricao")
+    @Column(nullable = false)
     private String descricao;
 
-    @Column(name = "quantidade", nullable = false)
+    @Column(nullable = false)
     private Integer quantidade;
 
-    @Column(name = "preco", nullable = false)
-    private BigDecimal preco;
+    @Column(nullable = false, precision = 15, scale = 2)
+    private BigDecimal valor;
 }

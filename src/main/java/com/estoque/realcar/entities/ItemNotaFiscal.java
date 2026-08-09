@@ -1,11 +1,8 @@
 package com.estoque.realcar.entities;
 
 import jakarta.persistence.*;
-<<<<<<< HEAD
 import lombok.*;
-=======
-import lombok.Data;
->>>>>>> 6a9f286 (adicionando modificacoes)
+
 import java.math.BigDecimal;
 
 @Entity
@@ -21,27 +18,49 @@ public class ItemNotaFiscal {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(length = 50, nullable = false)
     private String codigoProduto;
+
+    @Column(length = 255, nullable = false)
     private String descricao;
+
+    @Column(length = 20)
     private String ncmSh;
+
+    @Column(length = 10)
     private String cst;
+
+    @Column(length = 10)
     private String cfop;
+
+    @Column(length = 10)
     private String unidade;
+
+    @Column(precision = 15, scale = 3)
     private BigDecimal quantidade;
+
+    @Column(precision = 15, scale = 2)
     private BigDecimal valorUnitario;
+
+    @Column(precision = 15, scale = 2)
     private BigDecimal valorTotal;
+
+    @Column(precision = 15, scale = 2)
     private BigDecimal baseCalculoIcms;
-<<<<<<< HEAD
+
+    @Column(precision = 15, scale = 2)
     private BigDecimal valorIcms;
+
+    @Column(precision = 15, scale = 2)
     private BigDecimal valorIpi;
+
+    @Column(precision = 5, scale = 2)
     private BigDecimal aliquotaIcms;
+
+    @Column(precision = 5, scale = 2)
     private BigDecimal aliquotaIpi;
-=======
-    private Double percentualIcms;
-    private Double percentualIpi;
->>>>>>> 6a9f286 (adicionando modificacoes)
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "nota_fiscal_id")
+    @JoinColumn(name = "nota_fiscal_id", nullable = false)
     private NotaFiscal notaFiscal;
 }

@@ -1,17 +1,16 @@
 package com.estoque.realcar.dto.response;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class ProdutoResponseDTO {
+
     private Long id;
-    private String nome;
+    private String codigo;
+    private String descricao;
     private Integer quantidade;
-    private Double preco;
+    private Double valor;
 }

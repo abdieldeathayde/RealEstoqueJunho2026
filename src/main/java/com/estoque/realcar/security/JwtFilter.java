@@ -30,36 +30,54 @@ public class JwtFilter extends OncePerRequestFilter {
 
         String authHeader = request.getHeader("Authorization");
 
-        // sem token → continua
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+        // Sem token → continua a requisição
+        if (authHeader == null ||
+                !authHeader.startsWith("Bearer ")) {
+
             filterChain.doFilter(request, response);
             return;
         }
 
         String token = authHeader.substring(7);
 
-        // ✅ extrai username primeiro
-        String username = jwtService.extractUsername(token);
+        try {
 
-        // evita sobrescrever autenticação existente
-        if (username != null &&
-                SecurityContextHolder.getContext().getAuthentication() == null) {
+            // Extrai o username do token
+            String username =
+                    jwtService.extractUsername(token);
 
-            UserDetails userDetails =
-                    userDetailsService.loadUserByUsername(username);
+            // Evita sobrescrever uma autenticação existente
+            if (username != null &&
+                    SecurityContextHolder
+                            .getContext()
+                            .getAuthentication() == null) {
 
-            // ✅ valida token corretamente
-            if (jwtService.isTokenValid(token, userDetails)) {
+                UserDetails userDetails =
+                        userDetailsService
+                                .loadUserByUsername(username);
 
-                UsernamePasswordAuthenticationToken auth =
-                        new UsernamePasswordAuthenticationToken(
-                                userDetails,
-                                null,
-                                userDetails.getAuthorities()
-                        );
+                // Valida o token
+                if (jwtService.isTokenValid(
+                        token,
+                        userDetails)) {
 
-                SecurityContextHolder.getContext().setAuthentication(auth);
+                    UsernamePasswordAuthenticationToken auth =
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails,
+                                    null,
+                                    userDetails.getAuthorities()
+                            );
+
+                    SecurityContextHolder
+                            .getContext()
+                            .setAuthentication(auth);
+                }
             }
+
+        } catch (Exception e) {
+
+            // Token inválido, expirado ou malformado.
+            // A requisição continua sem autenticação.
         }
 
         filterChain.doFilter(request, response);

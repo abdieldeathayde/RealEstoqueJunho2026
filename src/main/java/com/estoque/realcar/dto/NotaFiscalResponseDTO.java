@@ -39,4 +39,28 @@ public class NotaFiscalResponseDTO {
     private BigDecimal valorTotalNota;
     private List<ItemNotaResponseDTO> itens;
 
+    public NotaFiscalResponseDTO(Long id, Integer numero, Integer serie, String naturezaOperacao, LocalDateTime dataHoraEmissao, String razaoSocial, String cnpjCpf, String inscricaoEstadual, String inscricaoEstadualSt, String endereco, String bairro, String cep, String municipio, String uf, String fone, BigDecimal baseCalculoIcms, BigDecimal valorIcms, BigDecimal baseCalculoIcmsSt, BigDecimal valorIcmsSt, BigDecimal valorFrete, BigDecimal valorSeguro, BigDecimal desconto, BigDecimal valorIpi, BigDecimal valorTotalProdutos, BigDecimal valorTotalNota, List<ItemNotaResponseDTO> itensDto) {
+        this.id = id;
+        this.naturezaOperacao = naturezaOperacao;
+        this.dataHoraEmissao = dataHoraEmissao;
+        this.razaoSocial = razaoSocial;
+        this.cnpjCpf = cnpjCpf;
+        this.inscricaoEstadual = inscricaoEstadual;
+        this.inscricaoEstadualSt = inscricaoEstadualSt;
+        this.endereco = endereco;
+        this.bairro = bairro;
+        this.cep = cep;
+        this.municipio = municipio;
+        this.uf = uf;
+        this.fone = fone;
+        this.baseCalculoIcms = baseCalculoIcms;
+        this.valorIcms = valorIcms;
+        this.valorIcmsSt = valorIcmsSt;
+        this.valorFrete = valorFrete;
+        this.valorSeguro = valorSeguro;
+        this.desconto = desconto;
+        this.valorIpi = valorIpi;
+        this.valorTotalProdutos = valorTotalProdutos;
+        this.valorTotalNota = valorTotalNota;
+    }
 }
