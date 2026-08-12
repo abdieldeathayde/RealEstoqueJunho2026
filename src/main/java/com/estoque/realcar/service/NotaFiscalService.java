@@ -16,7 +16,6 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -25,28 +24,27 @@ public class NotaFiscalService {
     private final NotaFiscalRepository notaFiscalRepository;
 
     /**
-     * Lista todas as notas fiscais.
+     * Lista todas as notas fiscais com seus respectivos itens.
      */
     @Transactional(readOnly = true)
     public List<NotaFiscalResponseDTO> listar() {
-        return notaFiscalRepository.findAll()
+        return notaFiscalRepository.findAllWithItens()
                 .stream()
                 .map(this::converterParaResponseDTO)
                 .toList();
     }
 
     /**
-     * Busca uma nota fiscal pelo ID.
+     * Busca uma nota fiscal pelo ID e traz seus itens.
      */
     @Transactional(readOnly = true)
     public NotaFiscalResponseDTO buscarPorId(Long id) {
-        NotaFiscal notaFiscal = notaFiscalRepository.findByIdWithItens(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Nota Fiscal não encontrada com o ID: " + id
-                ));
+        NotaFiscal nota = notaFiscalRepository.findByIdWithItens(id)
+                .orElseThrow(() -> new NoSuchElementException("Nota Fiscal não encontrada com o ID: " + id));
 
-        return converterParaResponseDTO(notaFiscal);
+        return converterParaResponseDTO(nota);
     }
+
     /**
      * Salva uma nova nota fiscal e seus respectivos itens.
      */
@@ -55,21 +53,24 @@ public class NotaFiscalService {
 
         NotaFiscal notaFiscal = converterParaEntidade(dto);
 
+        // Garante o vínculo bidirecional em cada item da lista
+        if (notaFiscal.getItens() != null) {
+            notaFiscal.getItens().forEach(item -> item.setNotaFiscal(notaFiscal));
+        }
+
         NotaFiscal salva = notaFiscalRepository.save(notaFiscal);
 
         return converterParaResponseDTO(salva);
     }
 
     /**
-     * Atualiza uma nota fiscal existente.
+     * Atualiza uma nota fiscal existente e sincroniza seus itens.
      */
     @Transactional
-    public NotaFiscalResponseDTO atualizar(
-            Long id,
-            NotaFiscalRequestDTO dto) {
+    public NotaFiscalResponseDTO atualizar(Long id, NotaFiscalRequestDTO dto) {
 
-        NotaFiscal notaExistente = notaFiscalRepository.findById(id)
-                .orElseThrow(() -> new NoSuchElementException(
+        NotaFiscal notaExistente = notaFiscalRepository.findByIdWithItens(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
                         "Não é possível atualizar: Nota Fiscal não encontrada com o ID: " + id
                 ));
 
@@ -109,7 +110,7 @@ public class NotaFiscalService {
         notaExistente.setValorTotalNota(dto.getValorTotalNota());
 
         // ==============================
-        // ITENS DA NOTA
+        // ITENS DA NOTA (Sincronização)
         // ==============================
 
         notaExistente.getItens().clear();
@@ -135,7 +136,7 @@ public class NotaFiscalService {
     public void excluir(Long id) {
 
         if (!notaFiscalRepository.existsById(id)) {
-            throw new NoSuchElementException(
+            throw new ResourceNotFoundException(
                     "Não é possível excluir: Nota Fiscal não encontrada com o ID: " + id
             );
         }
@@ -152,17 +153,7 @@ public class NotaFiscalService {
         List<ItemNotaResponseDTO> itensDto = (entidade.getItens() != null) ?
                 entidade.getItens()
                         .stream()
-                        .map(item -> new ItemNotaResponseDTO(
-                                item.getCodigoProduto(),    // 1º: codigo (String)
-                                item.getDescricao(),        // 2º: descricao (String)
-                                item.getNcmSh(),            // 3º: ncm (String)
-                                item.getCst(),              // 4º: cst (String)
-                                item.getCfop(),             // 5º: cfop (String)
-                                item.getUnidade(),          // 6º: unidade (String)
-                                item.getQuantidade(),       // 7º: quantidade (BigDecimal)
-                                item.getValorUnitario(),    // 8º: valorUnitario (BigDecimal)
-                                item.getValorTotal()        // 9º: valorTotal (BigDecimal)
-                        ))
+                        .map(this::converterItemParaDTO)
                         .toList() : new ArrayList<>();
 
         return new NotaFiscalResponseDTO(
@@ -192,6 +183,20 @@ public class NotaFiscalService {
                 entidade.getValorTotalProdutos(),
                 entidade.getValorTotalNota(),
                 itensDto
+        );
+    }
+
+    private ItemNotaResponseDTO converterItemParaDTO(ItemNotaFiscal item) {
+        return new ItemNotaResponseDTO(
+                item.getCodigoProduto(), // 1º: codigo (String)
+                item.getDescricao(),     // 2º: descricao (String)
+                item.getNcmSh(),         // 3º: ncm (String)
+                item.getCst(),           // 4º: cst (String)
+                item.getCfop(),          // 5º: cfop (String)
+                item.getUnidade(),       // 6º: unidade (String)
+                item.getQuantidade(),    // 7º: quantidade (BigDecimal)
+                item.getValorUnitario(), // 8º: valorUnitario (BigDecimal)
+                item.getValorTotal()     // 9º: valorTotal (BigDecimal)
         );
     }
 
@@ -235,7 +240,7 @@ public class NotaFiscalService {
             List<ItemNotaFiscal> itens = dto.getItens()
                     .stream()
                     .map(itemDto -> converterItemParaEntidade(itemDto, notaFiscal))
-                    .collect(Collectors.toList());
+                    .toList();
 
             notaFiscal.setItens(itens);
         }
@@ -255,13 +260,17 @@ public class NotaFiscalService {
 
         item.setCodigoProduto(itemDto.getCodigo());
         item.setDescricao(itemDto.getDescricao());
-        item.setNcmSh(itemDto.getNcmSh());
+
+        // Mapeamento tolerante para NCM vindo do JS
+        String ncm = itemDto.getNcmSh() != null ? itemDto.getNcmSh() : null;
+        item.setNcmSh(ncm);
+
         item.setCst(itemDto.getCst());
         item.setCfop(itemDto.getCfop());
         item.setUnidade(itemDto.getUnidade());
 
         if (itemDto.getQuantidade() != null) {
-            item.setQuantidade(BigDecimal.valueOf(itemDto.getQuantidade()));
+            item.setQuantidade(BigDecimal.valueOf(itemDto.getQuantidade().doubleValue()));
         }
 
         item.setValorUnitario(itemDto.getValorUnitario());

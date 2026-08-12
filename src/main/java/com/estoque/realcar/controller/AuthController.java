@@ -12,15 +12,19 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "http://localhost:63342")
 public class AuthController {
 
-    private final AuthenticationService service;
-    private final UserService usuarioService;
+
+    private final AuthenticationService authenticationService;
+    private final UserService userService;
 
     @PostMapping("/register")
-    public ResponseEntity<Void> cadastro(@RequestBody UserDTO userDTO) {
+    public ResponseEntity<Void> cadastro(
+            @RequestBody UserDTO userDTO) {
 
-        usuarioService.registro(userDTO);
+        userService.registro(userDTO);
+
         return ResponseEntity.ok().build();
     }
 
@@ -28,11 +32,15 @@ public class AuthController {
     public ResponseEntity<LoginResponse> login(
             @RequestBody LoginRequest request) {
 
-        String token = service.login(
+        String token = authenticationService.login(
                 request.getUsername(),
                 request.getPassword()
         );
 
-        return ResponseEntity.ok(new LoginResponse(token));
+        return ResponseEntity.ok(
+                new LoginResponse(token)
+        );
     }
+
+
 }

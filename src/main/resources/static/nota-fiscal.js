@@ -6,7 +6,6 @@ const btnVoltar = document.getElementById('btnVoltar');
 
 // Elementos do Formulário
 const form = document.getElementById('formNotaFiscal');
-const tabelaItens = document.getElementById('tabelaItens').getElementsByTagName('tbody')[0];
 const btnAdicionarItem = document.getElementById('btnAdicionarItem');
 const btnAtualizarLista = document.getElementById('btnAtualizarLista');
 const btnSalvar = document.getElementById('btnSalvar');
@@ -14,7 +13,7 @@ const tituloFormulario = document.getElementById('tituloFormulario');
 const subtituloFormulario = document.getElementById('subtituloFormulario');
 
 // URLs da API
-const API_URL = "http://localhost:8080/api/auth/notas-fiscais";
+const API_URL = "http://localhost:8080/api/notas-fiscais";
 
 // Variável de controle do estado atual ('CRIAR', 'EDITAR', 'VISUALIZAR')
 let modoFormulario = 'CRIAR';
@@ -25,109 +24,178 @@ function numero(valor) {
 
 // Alternar entre telas da aplicação
 function exibirTelaListagem() {
-    telaListagem.classList.remove('hidden');
-    telaFormulario.classList.add('hidden');
+    if (telaListagem) telaListagem.classList.remove('hidden');
+    if (telaFormulario) telaFormulario.classList.add('hidden');
     carregarNotas();
 }
 
 function exibirTelaFormulario(modo = 'CRIAR') {
     modoFormulario = modo;
-    telaListagem.classList.add('hidden');
-    telaFormulario.classList.remove('hidden');
+    if (telaListagem) telaListagem.classList.add('hidden');
+    if (telaFormulario) telaFormulario.classList.remove('hidden');
 
-    // Configura a acessibilidade das regras de negócio visuais baseado no modo
     configurarModoFormulario();
 }
 
 // Controla comportamento de inputs e textos conforme ação do usuário
 function configurarModoFormulario() {
-    const inputs = form.querySelectorAll('.dynamic-input');
+    if (!form) return;
+    const inputs = form.querySelectorAll('.dynamic-input, input, select');
 
     if (modoFormulario === 'VISUALIZAR') {
-        tituloFormulario.innerText = "Visualização de Nota Fiscal";
-        subtituloFormulario.innerText = "Modo de leitura. Os dados não podem ser modificados.";
-        btnSalvar.classList.add('hidden');
-        btnAdicionarItem.classList.add('hidden');
+        if (tituloFormulario) tituloFormulario.innerText = "Visualização de Nota Fiscal";
+        if (subtituloFormulario) subtituloFormulario.innerText = "Modo de leitura. Os dados não podem ser modificados.";
+        if (btnSalvar) btnSalvar.classList.add('hidden');
+        if (btnAdicionarItem) btnAdicionarItem.classList.add('hidden');
         inputs.forEach(i => i.setAttribute('disabled', 'true'));
         document.querySelectorAll('.col-acao-item').forEach(el => el.classList.add('hidden'));
     } else {
-        btnSalvar.classList.remove('hidden');
-        btnAdicionarItem.classList.remove('hidden');
+        if (btnSalvar) btnSalvar.classList.remove('hidden');
+        if (btnAdicionarItem) btnAdicionarItem.classList.remove('hidden');
         inputs.forEach(i => i.removeAttribute('disabled'));
         document.querySelectorAll('.col-acao-item').forEach(el => el.classList.remove('hidden'));
 
         if (modoFormulario === 'EDITAR') {
-            tituloFormulario.innerText = "Editar Nota Fiscal";
-            subtituloFormulario.innerText = "Modificando registros estruturais da Nota Fiscal.";
-            btnSalvar.innerText = "Atualizar Nota Fiscal";
+            if (tituloFormulario) tituloFormulario.innerText = "Editar Nota Fiscal";
+            if (subtituloFormulario) subtituloFormulario.innerText = "Modificando registros estruturais da Nota Fiscal.";
+            if (btnSalvar) btnSalvar.innerText = "Atualizar Nota Fiscal";
         } else {
-            tituloFormulario.innerText = "Nova Nota Fiscal";
-            subtituloFormulario.innerText = "Insira os dados correspondentes para faturamento e registro.";
-            btnSalvar.innerText = "Salvar Nota Fiscal";
+            if (tituloFormulario) tituloFormulario.innerText = "Nova Nota Fiscal";
+            if (subtituloFormulario) subtituloFormulario.innerText = "Insira os dados correspondentes para faturamento e registro.";
+            if (btnSalvar) btnSalvar.innerText = "Salvar Nota Fiscal";
         }
     }
 }
 
 // Adiciona uma linha de item dinâmica na tabela do formulário
-function criarLinhaItem(dadosItem = null) {
-    const row = tabelaItens.insertRow();
-    row.className = "hover:bg-slate-50 transition-colors input-item-row";
+function criarLinhaItem(item = {}) {
+    const tbody = document.querySelector("#tabelaItens tbody");
+    if (!tbody) return;
 
-    const isReadonly = modoFormulario === 'VISUALIZAR' ? 'disabled' : '';
-    const classeOcultaAcao = modoFormulario === 'VISUALIZAR' ? 'hidden' : '';
+    // Mapeamento seguro das propriedades (cobre DTO de resposta e Entidade)
+    const codigo = item.codigo || item.codigoProduto || '';
+    const descricao = item.descricao || '';
+    const ncm = item.ncm || item.ncmSh || '';
+    const cst = item.cst || '';
+    const cfop = item.cfop || '';
+    const unidade = item.unidade || '';
+    const quantidade = item.quantidade !== undefined && item.quantidade !== null ? item.quantidade : 1;
+    const valorUnitario = item.valorUnitario !== undefined && item.valorUnitario !== null ? item.valorUnitario : 0;
+    const valorTotal = item.valorTotal !== undefined && item.valorTotal !== null ? item.valorTotal : 0;
 
-    row.innerHTML = `
-        <td class="p-2"><input type="text" class="w-16 border rounded p-1 dynamic-input" data-field="codigo" value="${dadosItem?.codigo || ''}" ${isReadonly}></td>
-        <td class="p-2"><input type="text" class="w-full border rounded p-1 dynamic-input" data-field="descricao" value="${dadosItem?.descricao || ''}" ${isReadonly}></td>
-        <td class="p-2"><input type="text" class="w-16 border rounded p-1 dynamic-input" data-field="ncm" value="${dadosItem?.ncm || ''}" ${isReadonly}></td>
-        <td class="p-2"><input type="text" class="w-12 border rounded p-1 dynamic-input" data-field="cst" value="${dadosItem?.cst || ''}" ${isReadonly}></td>
-        <td class="p-2"><input type="text" class="w-12 border rounded p-1 dynamic-input" data-field="cfop" value="${dadosItem?.cfop || ''}" ${isReadonly}></td>
-        <td class="p-2"><input type="text" class="w-10 border rounded p-1 dynamic-input" data-field="unidade" value="${dadosItem?.unidade || ''}" ${isReadonly}></td>
-        <td class="p-2"><input type="number" class="w-14 border rounded p-1 dynamic-input" data-field="quantidade" oninput="calcularTotalItem(this)" value="${dadosItem?.quantidade || ''}" ${isReadonly}></td>
-        <td class="p-2"><input type="number" step="0.01" class="w-20 border rounded p-1 dynamic-input" data-field="valorUnitario" oninput="calcularTotalItem(this)" value="${dadosItem?.valorUnitario || ''}" ${isReadonly}></td>
-        <td class="p-2"><input type="number" step="0.01" class="w-20 border bg-slate-50 rounded p-1 font-medium" data-field="valorTotal" value="${dadosItem?.valorTotal || ''}" readonly></td>
-        <td class="p-2 text-center col-acao-item ${classeOcultaAcao}"><button type="button" onclick="this.closest('tr').remove(); atualizarTotaisNota();" class="text-red-500 hover:text-red-700 font-semibold">✕</button></td>
+    const tr = document.createElement("tr");
+    tr.className = "hover:bg-slate-50 transition-colors item-row";
+
+    tr.innerHTML = `
+        <td class="p-2"><input type="text" name="codigo" value="${codigo}" class="w-full text-xs border border-slate-300 rounded p-1"></td>
+        <td class="p-2"><input type="text" name="descricao" value="${descricao}" class="w-full text-xs border border-slate-300 rounded p-1"></td>
+        <td class="p-2"><input type="text" name="ncm" value="${ncm}" class="w-full text-xs border border-slate-300 rounded p-1"></td>
+        <td class="p-2"><input type="text" name="cst" value="${cst}" class="w-full text-xs border border-slate-300 rounded p-1"></td>
+        <td class="p-2"><input type="text" name="cfop" value="${cfop}" class="w-full text-xs border border-slate-300 rounded p-1"></td>
+        <td class="p-2"><input type="text" name="unidade" value="${unidade}" class="w-full text-xs border border-slate-300 rounded p-1"></td>
+        <td class="p-2"><input type="number" step="0.001" name="quantidade" value="${quantidade}" class="w-full text-xs border border-slate-300 rounded p-1 qtd-input"></td>
+        <td class="p-2"><input type="number" step="0.01" name="valorUnitario" value="${valorUnitario}" class="w-full text-xs border border-slate-300 rounded p-1 vl-unit-input"></td>
+        <td class="p-2"><input type="number" step="0.01" name="valorTotal" value="${valorTotal}" class="w-full text-xs border border-slate-300 rounded p-1 bg-slate-100 vl-total-input" readonly></td>
+        <td class="p-2 text-center col-acao-item">
+            <button type="button" class="btn-remover-item text-red-500 hover:text-red-700 font-bold p-1">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        </td>
     `;
+
+    // Listeners para recálculo automático de totais
+    const qtdInput = tr.querySelector('.qtd-input');
+    const unitInput = tr.querySelector('.vl-unit-input');
+    const btnRemover = tr.querySelector('.btn-remover-item');
+
+    if (qtdInput) qtdInput.addEventListener('input', () => calcularTotalItem(tr));
+    if (unitInput) unitInput.addEventListener('input', () => calcularTotalItem(tr));
+    if (btnRemover) {
+        btnRemover.addEventListener('click', () => {
+            tr.remove();
+            atualizarTotaisNota();
+        });
+    }
+
+    tbody.appendChild(tr);
+    configurarModoFormulario();
 }
 
-// Mapeamento de dados do formulário para envio ou população
-function preencherFormulario(nota) {
-    if (form.querySelector('#notaId')) form.querySelector('#notaId').value = nota.id || '';
-    if (form.elements.numero) form.elements.numero.value = nota.numero || '';
-    if (form.elements.serie) form.elements.serie.value = nota.serie || '';
-    if (form.elements.naturezaOperacao) form.elements.naturezaOperacao.value = nota.naturezaOperacao || '';
-    if (form.elements.dataHoraEmissao) form.elements.dataHoraEmissao.value = nota.dataHoraEmissao || '';
-    if (form.elements.razaoSocial) form.elements.razaoSocial.value = nota.razaoSocial || '';
-    if (form.elements.cnpjCpf) form.elements.cnpjCpf.value = nota.cnpjCpf || '';
-    if (form.elements.inscricaoEstadual) form.elements.inscricaoEstadual.value = nota.inscricaoEstadual || '';
-    if (form.elements.inscricaoEstadualSt) form.elements.inscricaoEstadualSt.value = nota.inscricaoEstadualSt || '';
-    if (form.elements.endereco) form.elements.endereco.value = nota.endereco || '';
-    if (form.elements.bairro) form.elements.bairro.value = nota.bairro || '';
-    if (form.elements.cep) form.elements.cep.value = nota.cep || '';
-    if (form.elements.municipio) form.elements.municipio.value = nota.municipio || '';
-    if (form.elements.uf) form.elements.uf.value = nota.uf || '';
-    if (form.elements.fone) form.elements.fone.value = nota.fone || '';
-    if (form.elements.baseCalculoIcms) form.elements.baseCalculoIcms.value = nota.baseCalculoIcms || '';
-    if (form.elements.valorIcms) form.elements.valorIcms.value = nota.valorIcms || '';
-    if (form.elements.baseCalculoIcmsSt) form.elements.baseCalculoIcmsSt.value = nota.baseCalculoIcmsSt || '';
-    if (form.elements.valorIcmsSt) form.elements.valorIcmsSt.value = nota.valorIcmsSt || '';
-    if (form.elements.valorFrete) form.elements.valorFrete.value = nota.valorFrete || '';
-    if (form.elements.valorSeguro) form.elements.valorSeguro.value = nota.valorSeguro || '';
-    if (form.elements.desconto) form.elements.desconto.value = nota.desconto || '';
-    if (form.elements.valorIpi) form.elements.valorIpi.value = nota.valorIpi || '';
-    if (form.elements.valorTotalProdutos) form.elements.valorTotalProdutos.value = nota.valorTotalProdutos || '';
-    if (form.elements.valorTotalNota) form.elements.valorTotalNota.value = nota.valorTotalNota || '';
+// Busca por ID primeiro. Se não achar, busca pelo atributo name=""
+function setCampo(nomeOuId, valor) {
+    if (valor === null || valor === undefined) valor = "";
 
-    tabelaItens.innerHTML = '';
-    if (nota.itens && nota.itens.length > 0) {
-        nota.itens.forEach(item => criarLinhaItem(item));
+    let el = document.getElementById(nomeOuId);
+    if (!el && form) {
+        el = form.querySelector(`[name="${nomeOuId}"]`);
+    }
+
+    if (el) {
+        if (el.type === 'datetime-local' && typeof valor === 'string' && valor.length >= 16) {
+            el.value = valor.substring(0, 16);
+        } else {
+            el.value = valor;
+        }
     } else {
-        if (modoFormulario !== 'VISUALIZAR') criarLinhaItem();
+        console.warn(`[Aviso] Input não localizado no HTML: id ou name = "${nomeOuId}"`);
     }
 }
 
+function preencherFormulario(nota) {
+    console.log("Preenchendo formulário com a Nota:", nota);
+
+    setCampo("notaId", nota.id);
+
+    // 1. DADOS GERAIS DA NOTA
+    setCampo("naturezaOperacao", nota.naturezaOperacao);
+    setCampo("numero", nota.numero);
+    setCampo("serie", nota.serie);
+    setCampo("dataHoraEmissao", nota.dataHoraEmissao);
+
+    // 2. DADOS DO EMITENTE / DESTINATÁRIO
+    setCampo("razaoSocial", nota.razaoSocial);
+    setCampo("cnpjCpf", nota.cnpjCpf);
+    setCampo("inscricaoEstadual", nota.inscricaoEstadual);
+    setCampo("inscricaoEstadualSt", nota.inscricaoEstadualSt);
+    setCampo("fone", nota.fone);
+    setCampo("endereco", nota.endereco);
+    setCampo("bairro", nota.bairro);
+    setCampo("cep", nota.cep);
+    setCampo("municipio", nota.municipio);
+    setCampo("uf", nota.uf);
+
+    // 4. CÁLCULOS DE IMPOSTOS E TOTAIS
+    setCampo("baseCalculoIcms", nota.baseCalculoIcms);
+    setCampo("valorIcms", nota.valorIcms);
+    setCampo("baseCalculoIcmsSt", nota.baseCalculoIcmsSt);
+    setCampo("valorIcmsSt", nota.valorIcmsSt);
+    setCampo("valorFrete", nota.valorFrete);
+    setCampo("valorSeguro", nota.valorSeguro);
+    setCampo("desconto", nota.desconto);
+    setCampo("valorIpi", nota.valorIpi);
+    setCampo("valorTotalProdutos", nota.valorTotalProdutos);
+    setCampo("valorTotalNota", nota.valorTotalNota);
+
+    // 3. DADOS DOS PRODUTOS
+    const tbody = document.querySelector("#tabelaItens tbody");
+    if (tbody) tbody.innerHTML = "";
+
+    const itens = nota.itens || nota.itensNota || nota.itensNotaFiscal || [];
+    console.log("Itens para renderizar na tabela:", itens);
+
+    if (Array.isArray(itens) && itens.length > 0) {
+        itens.forEach(item => criarLinhaItem(item));
+    } else {
+        criarLinhaItem();
+    }
+
+    atualizarTotaisNota();
+}
+
 function montarNotaFiscal() {
+    if (!form) return {};
     const campos = form.elements;
+
     return {
         numero: campos.numero?.value || '',
         serie: campos.serie?.value || '',
@@ -158,48 +226,51 @@ function montarNotaFiscal() {
 }
 
 function obterItens() {
-    return [...document.querySelectorAll(".input-item-row")]
+    return [...document.querySelectorAll("#tabelaItens tbody tr.item-row")]
         .map(row => ({
-            codigo: row.querySelector('[data-field="codigo"]').value,
-            descricao: row.querySelector('[data-field="descricao"]').value,
-            ncm: row.querySelector('[data-field="ncm"]').value,
-            cst: row.querySelector('[data-field="cst"]').value,
-            cfop: row.querySelector('[data-field="cfop"]').value,
-            unidade: row.querySelector('[data-field="unidade"]').value,
-            quantidade: numero(row.querySelector('[data-field="quantidade"]').value),
-            valorUnitario: numero(row.querySelector('[data-field="valorUnitario"]').value),
-            valorTotal: numero(row.querySelector('[data-field="valorTotal"]').value)
+            codigo: row.querySelector('[name="codigo"]')?.value || '',
+            descricao: row.querySelector('[name="descricao"]')?.value || '',
+            ncm: row.querySelector('[name="ncm"]')?.value || '',
+            cst: row.querySelector('[name="cst"]')?.value || '',
+            cfop: row.querySelector('[name="cfop"]')?.value || '',
+            unidade: row.querySelector('[name="unidade"]')?.value || '',
+            quantidade: numero(row.querySelector('[name="quantidade"]')?.value),
+            valorUnitario: numero(row.querySelector('[name="valorUnitario"]')?.value),
+            valorTotal: numero(row.querySelector('[name="valorTotal"]')?.value)
         }))
         .filter(item => item.descricao && item.descricao.trim() !== "");
 }
 
 // Cálculos dinâmicos
-function calcularTotalItem(input) {
-    const row = input.closest('tr');
-    const qtd = parseFloat(row.querySelector('[data-field="quantidade"]').value) || 0;
-    const valUnit = parseFloat(row.querySelector('[data-field="valorUnitario"]').value) || 0;
-    const totalInput = row.querySelector('[data-field="valorTotal"]');
+function calcularTotalItem(row) {
+    if (!row) return;
 
-    totalInput.value = (qtd * valUnit).toFixed(2);
+    const qtd = parseFloat(row.querySelector('[name="quantidade"]')?.value) || 0;
+    const valUnit = parseFloat(row.querySelector('[name="valorUnitario"]')?.value) || 0;
+    const totalInput = row.querySelector('[name="valorTotal"]');
+
+    if (totalInput) {
+        totalInput.value = (qtd * valUnit).toFixed(2);
+    }
     atualizarTotaisNota();
 }
 
 function atualizarTotaisNota() {
     let totalProdutos = 0;
-    document.querySelectorAll('[data-field="valorTotal"]').forEach(input => {
+    document.querySelectorAll('#tabelaItens tbody [name="valorTotal"]').forEach(input => {
         totalProdutos += parseFloat(input.value) || 0;
     });
 
-    const inputTotalProdutos = form.querySelector('[name="valorTotalProdutos"]');
+    const inputTotalProdutos = form ? form.querySelector('[name="valorTotalProdutos"]') : null;
     if (inputTotalProdutos) inputTotalProdutos.value = totalProdutos.toFixed(2);
 
-    const frete = parseFloat(form.querySelector('[name="valorFrete"]')?.value) || 0;
-    const seguro = parseFloat(form.querySelector('[name="valorSeguro"]')?.value) || 0;
-    const desconto = parseFloat(form.querySelector('[name="desconto"]')?.value) || 0;
-    const ipi = parseFloat(form.querySelector('[name="valorIpi"]')?.value) || 0;
+    const frete = parseFloat(form?.querySelector('[name="valorFrete"]')?.value) || 0;
+    const seguro = parseFloat(form?.querySelector('[name="valorSeguro"]')?.value) || 0;
+    const desconto = parseFloat(form?.querySelector('[name="desconto"]')?.value) || 0;
+    const ipi = parseFloat(form?.querySelector('[name="valorIpi"]')?.value) || 0;
 
     const totalNota = (totalProdutos + frete + seguro + ipi) - desconto;
-    const inputTotalNota = form.querySelector('[name="valorTotalNota"]');
+    const inputTotalNota = form ? form.querySelector('[name="valorTotalNota"]') : null;
     if (inputTotalNota) inputTotalNota.value = totalNota.toFixed(2);
 }
 
@@ -219,10 +290,10 @@ function preencherTabelaListagem(notas) {
     const tbody = document.querySelector("#tabelaNotas tbody");
     if (!tbody) return;
 
-    tbody.innerHTML = ``;
+    tbody.innerHTML = "";
 
-    if (!notas || notas.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">Nenhuma nota fiscal encontrada.</td></tr>`;
+    if (!Array.isArray(notas) || notas.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="p-3 text-center text-slate-400">Nenhuma nota fiscal cadastrada.</td></tr>`;
         return;
     }
 
@@ -235,13 +306,13 @@ function preencherTabelaListagem(notas) {
                 <td class="p-3">${nota.razaoSocial || '-'}</td>
                 <td class="p-3 font-semibold text-slate-900">R$ ${(nota.valorTotalNota ?? 0).toFixed(2)}</td>
                 <td class="p-3 space-x-1 text-center">
-                    <button onclick="buscarETratarNota(${nota.id}, 'VISUALIZAR')" class="bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors border border-blue-200">
+                    <button type="button" onclick="buscarETratarNota(${nota.id}, 'VISUALIZAR')" class="bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors border border-blue-200">
                         Ver
                     </button>
-                    <button onclick="buscarETratarNota(${nota.id}, 'EDITAR')" class="bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors border border-amber-200">
+                    <button type="button" onclick="buscarETratarNota(${nota.id}, 'EDITAR')" class="bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors border border-amber-200">
                         Editar
                     </button>
-                    <button onclick="excluirNota(${nota.id})" class="bg-red-50 hover:bg-red-100 text-red-700 text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors border border-red-200">
+                    <button type="button" onclick="excluirNota(${nota.id})" class="bg-red-50 hover:bg-red-100 text-red-700 text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors border border-red-200">
                         Excluir
                     </button>
                 </td>
@@ -283,48 +354,52 @@ async function excluirNota(id) {
 }
 
 // Envio do formulário (POST / PUT)
-form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const notaFiscal = montarNotaFiscal();
-    const idInput = document.getElementById('notaId');
-    const id = idInput ? idInput.value : '';
+if (form) {
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const notaFiscal = montarNotaFiscal();
+        const idInput = document.getElementById('notaId');
+        const id = idInput ? idInput.value : '';
 
-    if (!notaFiscal.numero || !notaFiscal.razaoSocial || notaFiscal.itens.length === 0) {
-        alert("Campos obrigatórios ausentes: Verifique o Número, a Razão Social e adicione ao menos 1 Item com descrição.");
-        return;
-    }
-
-    const urlFinal = modoFormulario === 'EDITAR' ? `${API_URL}/${id}` : API_URL;
-    const metodoHttp = modoFormulario === 'EDITAR' ? 'PUT' : 'POST';
-
-    try {
-        const response = await fetch(urlFinal, {
-            method: metodoHttp,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(notaFiscal)
-        });
-
-        if (response.ok) {
-            alert(`Nota Fiscal gravada com sucesso!`);
-            exibirTelaListagem();
-        } else {
-            const erro = await response.text();
-            alert(`Erro do Servidor: ${erro}`);
+        if (!notaFiscal.numero || !notaFiscal.razaoSocial || notaFiscal.itens.length === 0) {
+            alert("Campos obrigatórios ausentes: Verifique o Número, a Razão Social e adicione ao menos 1 Item com descrição.");
+            return;
         }
-    } catch (error) {
-        console.error('Erro na requisição:', error);
-        alert('Erro de conexão com o backend.');
-    }
-});
 
-// Register Event Listeners no nível global (Escopo Correto)
+        const urlFinal = modoFormulario === 'EDITAR' ? `${API_URL}/${id}` : API_URL;
+        const metodoHttp = modoFormulario === 'EDITAR' ? 'PUT' : 'POST';
+
+        try {
+            const response = await fetch(urlFinal, {
+                method: metodoHttp,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(notaFiscal)
+            });
+
+            if (response.ok) {
+                alert(`Nota Fiscal gravada com sucesso!`);
+                exibirTelaListagem();
+            } else {
+                const erro = await response.text();
+                alert(`Erro do Servidor: ${erro}`);
+            }
+        } catch (error) {
+            console.error('Erro na requisição:', error);
+            alert('Erro de conexão com o backend.');
+        }
+    });
+}
+
+// Listeners de Eventos Globais
 if (btnNovaNota) {
     btnNovaNota.addEventListener('click', () => {
-        form.reset();
+        if (form) form.reset();
         const notaIdInput = document.getElementById('notaId');
         if (notaIdInput) notaIdInput.value = '';
 
-        tabelaItens.innerHTML = '';
+        const tbody = document.querySelector("#tabelaItens tbody");
+        if (tbody) tbody.innerHTML = '';
+
         exibirTelaFormulario('CRIAR');
         criarLinhaItem();
     });
@@ -343,11 +418,11 @@ if (btnAtualizarLista) {
 }
 
 ['valorFrete', 'valorSeguro', 'desconto', 'valorIpi'].forEach(name => {
-    const input = form.querySelector(`[name="${name}"]`);
+    const input = form ? form.querySelector(`[name="${name}"]`) : null;
     if (input) input.addEventListener('input', atualizarTotaisNota);
 });
 
-// Inicialização default da SPA
+// Inicialização da SPA
 window.addEventListener('DOMContentLoaded', () => {
     exibirTelaListagem();
 });

@@ -73,9 +73,14 @@ public class NotaFiscal {
     private BigDecimal pesoLiquido;
 
 
-    @OneToMany(mappedBy = "notaFiscal", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @Builder.Default
+    @OneToMany(mappedBy = "notaFiscal", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ItemNotaFiscal> itens = new ArrayList<>();
+
+
+    public void adicionarItem(ItemNotaFiscal item) {
+        itens.add(item);
+        item.setNotaFiscal(this);
+    }
 
 
 }

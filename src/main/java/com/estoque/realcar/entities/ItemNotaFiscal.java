@@ -1,5 +1,6 @@
 package com.estoque.realcar.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -61,6 +62,7 @@ public class ItemNotaFiscal {
     private BigDecimal aliquotaIpi;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "nota_fiscal_id", nullable = false)
+    @JoinColumn(name = "nota_fiscal_id")
+    @JsonIgnore // Evita o loop infinito na serialização
     private NotaFiscal notaFiscal;
 }

@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/auth/notas-fiscais")
+@RequestMapping("/api/notas-fiscais")
 @CrossOrigin(origins = "*")
 @RequiredArgsConstructor
 public class NotaFiscalController {
@@ -49,27 +49,32 @@ public class NotaFiscalController {
      */
     @GetMapping("/{id}")
     public ResponseEntity<NotaFiscalResponseDTO> buscar(
-            @PathVariable("id") Long id) { // <-- Adicionado ("id")
+            @PathVariable("id") Long id) {
 
         NotaFiscalResponseDTO nota = notaFiscalService.buscarPorId(id);
         return ResponseEntity.ok(nota);
     }
 
+    /**
+     * Atualiza uma nota fiscal existente.
+     */
     @PutMapping("/{id}")
     public ResponseEntity<NotaFiscalResponseDTO> atualizar(
-            @PathVariable("id") Long id, // <-- Adicionado ("id")
+            @PathVariable("id") Long id,
             @Valid @RequestBody NotaFiscalRequestDTO dto) {
 
         NotaFiscalResponseDTO notaAtualizada = notaFiscalService.atualizar(id, dto);
         return ResponseEntity.ok(notaAtualizada);
     }
 
+    /**
+     * Exclui uma nota fiscal pelo ID.
+     */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> excluir(
-            @PathVariable("id") Long id) { // <-- Adicionado ("id")
+            @PathVariable("id") Long id) {
 
         notaFiscalService.excluir(id);
         return ResponseEntity.noContent().build();
     }
-
 }
