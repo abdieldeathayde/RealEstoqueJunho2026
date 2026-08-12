@@ -148,7 +148,7 @@ function loadProductsFromAPI() {
                 return {
                     id: product.id ?? null,
                     codigo: product.codigo != null ? String(product.codigo) : '',
-                    description: product.descricao ?? product.description ?? '',
+                    description: product.descricao ?? '',
                     quantity: Number(product.quantidade ?? product.quantity ?? 0),
                     price: Number(product.valor ?? product.price ?? 0)
                 };

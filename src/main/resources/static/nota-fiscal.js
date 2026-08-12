@@ -73,8 +73,8 @@ function criarLinhaItem(item = {}) {
     if (!tbody) return;
 
     // Mapeamento seguro das propriedades (cobre DTO de resposta e Entidade)
-    const codigo = item.codigo || item.codigoProduto || '';
-    const descricao = item.descricao || '';
+    const codigo = item.codigo || item.codigoProduto || item.codigoProduto || '';
+    const descricao = item.descricao || item.descricao || '';
     const ncm = item.ncm || item.ncmSh || '';
     const cst = item.cst || '';
     const cfop = item.cfop || '';
@@ -180,7 +180,7 @@ function preencherFormulario(nota) {
     const tbody = document.querySelector("#tabelaItens tbody");
     if (tbody) tbody.innerHTML = "";
 
-    const itens = nota.itens || nota.itensNota || nota.itensNotaFiscal || [];
+    const itens = nota.itens || [];
     console.log("Itens para renderizar na tabela:", itens);
 
     if (Array.isArray(itens) && itens.length > 0) {
@@ -278,11 +278,13 @@ function atualizarTotaisNota() {
 async function carregarNotas() {
     try {
         const response = await fetch(API_URL);
-        if (!response.ok) throw new Error("Erro ao carregar notas.");
-        const notas = await response.json();
-        preencherTabelaListagem(notas);
+        const data = await response.json();
+        console.log('📄 Notas fiscais recebidas:', data);
+        console.log('📄 Total de notas:', data.length);
+        console.log('📄 Primeira nota:', data[0]);
+        preencherTabelaListagem(data);
     } catch (e) {
-        console.error(e);
+        console.error('❌ Erro ao carregar notas:', e);
     }
 }
 
