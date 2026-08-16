@@ -3,9 +3,9 @@ package com.estoque.realcar.dto;
 import java.math.BigDecimal;
 
 public record ItemNotaResponseDTO(
-        String codigo,       // Se aqui for "codigoProduto", atualize no JS ou na annotation
+        String codigo,       // ← Atenção: o campo é "codigo", não "codigoProduto"
         String descricao,
-        String ncm,          // Se aqui for "ncmSh", alinhe no JS
+        String ncm,          // ← Atenção: o campo é "ncm", não "ncmSh"
         String cst,
         String cfop,
         String unidade,

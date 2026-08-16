@@ -37,11 +37,8 @@ public class NotaFiscalController {
      * Lista todas as notas fiscais.
      */
     @GetMapping
-    public ResponseEntity<List<NotaFiscalResponseDTO>> listar() {
-
-        List<NotaFiscalResponseDTO> notas = notaFiscalService.listar();
-
-        return ResponseEntity.ok(notas);
+    public ResponseEntity<?> listar() {
+        return ResponseEntity.ok(notaFiscalService.listar());
     }
 
     /**

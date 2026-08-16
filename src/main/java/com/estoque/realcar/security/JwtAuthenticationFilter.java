@@ -1,6 +1,5 @@
 package com.estoque.realcar.security;
 
-import com.estoque.realcar.security.JwtService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -41,9 +40,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
+        System.out.println("======================================");
+        System.out.println("JWT FILTER");
+        System.out.println("Método: " + request.getMethod());
+        System.out.println("URI: " + request.getRequestURI());
+
         String authHeader = request.getHeader("Authorization");
 
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+        System.out.println(
+                "Authorization presente: " +
+                        (authHeader != null)
+        );
+
+        if (authHeader == null ||
+                !authHeader.startsWith("Bearer ")) {
+
+            System.out.println(
+                    "JWT não encontrado no Authorization"
+            );
+
             filterChain.doFilter(request, response);
             return;
         }
@@ -52,17 +67,47 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         try {
 
-            String username = jwtService.extractUsername(jwt);
+            String username =
+                    jwtService.extractUsername(jwt);
+
+            System.out.println(
+                    "Username extraído: " + username
+            );
 
             if (username != null &&
-                    SecurityContextHolder.getContext().getAuthentication() == null) {
+                    SecurityContextHolder
+                            .getContext()
+                            .getAuthentication() == null) {
 
                 UserDetails userDetails =
-                        userDetailsService.loadUserByUsername(username);
+                        userDetailsService
+                                .loadUserByUsername(username);
 
-                if (jwtService.isTokenValid(jwt, userDetails)) {
+                System.out.println(
+                        "Usuário encontrado: " +
+                                userDetails.getUsername()
+                );
 
-                    UsernamePasswordAuthenticationToken authentication =
+                System.out.println(
+                        "Authorities: " +
+                                userDetails.getAuthorities()
+                );
+
+                boolean tokenValid =
+                        jwtService.isTokenValid(
+                                jwt,
+                                userDetails
+                        );
+
+                System.out.println(
+                        "Token válido: " +
+                                tokenValid
+                );
+
+                if (tokenValid) {
+
+                    UsernamePasswordAuthenticationToken
+                            authentication =
                             new UsernamePasswordAuthenticationToken(
                                     userDetails,
                                     null,
@@ -77,13 +122,41 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     SecurityContextHolder
                             .getContext()
                             .setAuthentication(authentication);
+
+                    System.out.println(
+                            "✅ AUTENTICAÇÃO JWT CONFIGURADA"
+                    );
+                } else {
+
+                    System.out.println(
+                            "❌ TOKEN JWT INVÁLIDO"
+                    );
                 }
             }
 
         } catch (Exception e) {
 
+            System.err.println(
+                    "❌ ERRO AO PROCESSAR JWT"
+            );
+
+            System.err.println(
+                    "Mensagem: " + e.getMessage()
+            );
+
+            e.printStackTrace();
+
             SecurityContextHolder.clearContext();
         }
+
+        System.out.println(
+                "Authentication atual: " +
+                        SecurityContextHolder
+                                .getContext()
+                                .getAuthentication()
+        );
+
+        System.out.println("======================================");
 
         filterChain.doFilter(request, response);
     }

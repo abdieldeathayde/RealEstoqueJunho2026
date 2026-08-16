@@ -275,16 +275,71 @@ function atualizarTotaisNota() {
 }
 
 // Integração com a API - Listagem (GET)
+// URLs da API
+const token = localStorage.getItem("token");
+console.log("Token:", token);
+// Integração com a API - Listagem (GET)
 async function carregarNotas() {
     try {
-        const response = await fetch(API_URL);
-        const data = await response.json();
-        console.log('📄 Notas fiscais recebidas:', data);
-        console.log('📄 Total de notas:', data.length);
-        console.log('📄 Primeira nota:', data[0]);
-        preencherTabelaListagem(data);
-    } catch (e) {
-        console.error('❌ Erro ao carregar notas:', e);
+        const response = await fetch(API_URL, {
+            method: "GET",
+            headers: {
+                "Accept": "application/json",
+                "Authorization": `Bearer ${token}`
+            }
+        });
+
+        console.log("URL da requisição:", API_URL);
+        console.log("Status:", response.status);
+        console.log(
+            "Content-Type:",
+            response.headers.get("content-type")
+        );
+
+        const texto = await response.text();
+
+        console.log("Resposta da API:", texto);
+
+        if (!response.ok) {
+            throw new Error(
+                `Erro HTTP ${response.status}: ${
+                    texto || "resposta vazia"
+                }`
+            );
+        }
+
+        if (!texto.trim()) {
+            console.warn("A API retornou uma resposta vazia.");
+            preencherTabelaListagem([]);
+            return;
+        }
+
+        let notas;
+
+        try {
+            notas = JSON.parse(texto);
+        } catch (error) {
+            console.error(
+                "Resposta não é um JSON válido:",
+                texto
+            );
+
+            throw new Error(
+                "A API retornou conteúdo que não é JSON válido."
+            );
+        }
+
+        console.log("Notas carregadas:", notas);
+
+        preencherTabelaListagem(notas);
+
+    } catch (error) {
+        console.error(
+            "❌ Erro ao carregar notas:",
+            error
+        );
+
+        preencherTabelaListagem([]);
     }
 }
 
@@ -308,10 +363,10 @@ function preencherTabelaListagem(notas) {
                 <td class="p-3">${nota.razaoSocial || '-'}</td>
                 <td class="p-3 font-semibold text-slate-900">R$ ${(nota.valorTotalNota ?? 0).toFixed(2)}</td>
                 <td class="p-3 space-x-1 text-center">
-                    <button type="button" onclick="buscarETratarNota(${nota.id}, 'VISUALIZAR')" class="bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors border border-blue-200">
+                    <button type="button" onclick="buscarNotaFiscal(${nota.id}, 'VISUALIZAR')" class="bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors border border-blue-200">
                         Ver
                     </button>
-                    <button type="button" onclick="buscarETratarNota(${nota.id}, 'EDITAR')" class="bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors border border-amber-200">
+                    <button type="button" onclick="buscarNotaFiscal(${nota.id}, 'EDITAR')" class="bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors border border-amber-200">
                         Editar
                     </button>
                     <button type="button" onclick="excluirNota(${nota.id})" class="bg-red-50 hover:bg-red-100 text-red-700 text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors border border-red-200">
@@ -323,71 +378,220 @@ function preencherTabelaListagem(notas) {
     });
 }
 
-// Busca os dados do backend para alimentar a visualização ou edição
-async function buscarETratarNota(id, acao) {
+async function buscarNotaFiscal(id, modo = 'VISUALIZAR') {
     try {
-        const response = await fetch(`${API_URL}/${id}`);
-        if (!response.ok) {
-            const erroTexto = await response.text();
-            throw new Error(`Erro ${response.status}: ${erroTexto || 'Não foi possível carregar a nota.'}`);
-        }
-        const nota = await response.json();
+        const token = localStorage.getItem("token");
 
-        exibirTelaFormulario(acao);
+        if (!token) {
+            alert("Sessão expirada. Faça login novamente.");
+            return;
+        }
+
+        console.log("Buscando nota fiscal:", id);
+        console.log("Modo:", modo);
+
+        const response = await fetch(`${API_URL}/${id}`, {
+            method: "GET",
+            headers: {
+                "Accept": "application/json",
+                "Authorization": `Bearer ${token}`
+            }
+        });
+
+        console.log("Status:", response.status);
+
+        const texto = await response.text();
+
+        console.log("Resposta:", texto);
+
+        if (!response.ok) {
+            throw new Error(
+                `Erro HTTP ${response.status}: ${texto || "resposta vazia"}`
+            );
+        }
+
+        if (!texto.trim()) {
+            throw new Error("A API retornou uma resposta vazia.");
+        }
+
+        const nota = JSON.parse(texto);
+
+        console.log("Nota fiscal encontrada:", nota);
+
+        // Guarda o modo atual
+        modoFormulario = modo;
+
+        // Preenche o formulário
         preencherFormulario(nota);
+
+        // Exibe a tela
+        exibirTelaFormulario(modo);
+
     } catch (error) {
-        alert(error.message);
+        console.error("❌ Erro ao buscar nota fiscal:", error);
+
+        alert(
+            `Não foi possível carregar a nota fiscal.\n\n${error.message}`
+        );
     }
 }
 
 // API - Remoção (DELETE)
 async function excluirNota(id) {
-    if (!confirm("Deseja realmente excluir esta nota fiscal permanentemente?")) return;
+
+    if (!confirm(
+        "Deseja realmente excluir esta nota fiscal permanentemente?"
+    )) {
+        return;
+    }
+
     try {
-        const response = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
-        if (response.ok) {
-            await carregarNotas();
-        } else {
-            alert("Não foi possível excluir a nota.");
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+            alert("Sessão expirada. Faça login novamente.");
+            return;
         }
+
+        const response = await fetch(`${API_URL}/${id}`, {
+            method: "DELETE",
+            headers: {
+                "Authorization": `Bearer ${token}`,
+                "Accept": "application/json"
+            }
+        });
+
+        console.log("DELETE status:", response.status);
+
+        if (response.ok) {
+
+            alert("Nota fiscal excluída com sucesso!");
+
+            await carregarNotas();
+
+        } else {
+
+            const erro = await response.text();
+
+            console.error("Erro ao excluir:", erro);
+
+            alert(
+                `Não foi possível excluir a nota fiscal.\n\n` +
+                `HTTP ${response.status}\n${erro}`
+            );
+        }
+
     } catch (error) {
+
         console.error("Erro ao deletar:", error);
+
+        alert("Erro de conexão com o backend.");
     }
 }
 
 // Envio do formulário (POST / PUT)
 if (form) {
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const notaFiscal = montarNotaFiscal();
-        const idInput = document.getElementById('notaId');
-        const id = idInput ? idInput.value : '';
 
-        if (!notaFiscal.numero || !notaFiscal.razaoSocial || notaFiscal.itens.length === 0) {
-            alert("Campos obrigatórios ausentes: Verifique o Número, a Razão Social e adicione ao menos 1 Item com descrição.");
+    form.addEventListener('submit', async (e) => {
+
+        e.preventDefault();
+
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+            alert("Sessão expirada. Faça login novamente.");
             return;
         }
 
-        const urlFinal = modoFormulario === 'EDITAR' ? `${API_URL}/${id}` : API_URL;
-        const metodoHttp = modoFormulario === 'EDITAR' ? 'PUT' : 'POST';
+        const notaFiscal = montarNotaFiscal();
+
+        const idInput = document.getElementById('notaId');
+        const id = idInput ? idInput.value : '';
+
+        // Validação
+        if (
+            !notaFiscal.numero ||
+            !notaFiscal.razaoSocial ||
+            notaFiscal.itens.length === 0
+        ) {
+            alert(
+                "Campos obrigatórios ausentes: " +
+                "Verifique o Número, a Razão Social " +
+                "e adicione ao menos 1 Item com descrição."
+            );
+            return;
+        }
+
+        const urlFinal =
+            modoFormulario === 'EDITAR'
+                ? `${API_URL}/${id}`
+                : API_URL;
+
+        const metodoHttp =
+            modoFormulario === 'EDITAR'
+                ? 'PUT'
+                : 'POST';
+
+        console.log("Método:", metodoHttp);
+        console.log("URL:", urlFinal);
+        console.log("Dados:", notaFiscal);
 
         try {
+
             const response = await fetch(urlFinal, {
+
                 method: metodoHttp,
-                headers: { 'Content-Type': 'application/json' },
+
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+
                 body: JSON.stringify(notaFiscal)
             });
 
+            console.log(
+                "Status da gravação:",
+                response.status
+            );
+
+            const texto = await response.text();
+
+            console.log(
+                "Resposta do servidor:",
+                texto
+            );
+
             if (response.ok) {
-                alert(`Nota Fiscal gravada com sucesso!`);
+
+                alert(
+                    modoFormulario === 'EDITAR'
+                        ? "Nota Fiscal atualizada com sucesso!"
+                        : "Nota Fiscal criada com sucesso!"
+                );
+
                 exibirTelaListagem();
+
             } else {
-                const erro = await response.text();
-                alert(`Erro do Servidor: ${erro}`);
+
+                alert(
+                    `Erro do servidor.\n\n` +
+                    `HTTP ${response.status}\n` +
+                    `${texto || "Resposta vazia"}`
+                );
             }
+
         } catch (error) {
-            console.error('Erro na requisição:', error);
-            alert('Erro de conexão com o backend.');
+
+            console.error(
+                "Erro na requisição:",
+                error
+            );
+
+            alert(
+                "Erro de conexão com o backend."
+            );
         }
     });
 }

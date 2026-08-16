@@ -37,10 +37,24 @@ public class NotaFiscalResponseDTO {
     private BigDecimal valorIpi;
     private BigDecimal valorTotalProdutos;
     private BigDecimal valorTotalNota;
-    private List<ItemNotaResponseDTO> itens;
+    private List<ItemNotaResponseDTO> itens; // ✅ Campo existe
 
-    public NotaFiscalResponseDTO(Long id, Integer numero, Integer serie, String naturezaOperacao, LocalDateTime dataHoraEmissao, String razaoSocial, String cnpjCpf, String inscricaoEstadual, String inscricaoEstadualSt, String endereco, String bairro, String cep, String municipio, String uf, String fone, BigDecimal baseCalculoIcms, BigDecimal valorIcms, BigDecimal baseCalculoIcmsSt, BigDecimal valorIcmsSt, BigDecimal valorFrete, BigDecimal valorSeguro, BigDecimal desconto, BigDecimal valorIpi, BigDecimal valorTotalProdutos, BigDecimal valorTotalNota, List<ItemNotaResponseDTO> itensDto) {
+    // ✅ CONSTRUTOR CORRIGIDO - ADICIONAR this.itens = itensDto;
+    public NotaFiscalResponseDTO(Long id, Integer numero, Integer serie,
+                                 String naturezaOperacao, LocalDateTime dataHoraEmissao,
+                                 String razaoSocial, String cnpjCpf,
+                                 String inscricaoEstadual, String inscricaoEstadualSt,
+                                 String endereco, String bairro, String cep,
+                                 String municipio, String uf, String fone,
+                                 BigDecimal baseCalculoIcms, BigDecimal valorIcms,
+                                 BigDecimal baseCalculoIcmsSt, BigDecimal valorIcmsSt,
+                                 BigDecimal valorFrete, BigDecimal valorSeguro,
+                                 BigDecimal desconto, BigDecimal valorIpi,
+                                 BigDecimal valorTotalProdutos, BigDecimal valorTotalNota,
+                                 List<ItemNotaResponseDTO> itensDto) {
         this.id = id;
+        this.numero = String.valueOf(numero);
+        this.serie = String.valueOf(serie);
         this.naturezaOperacao = naturezaOperacao;
         this.dataHoraEmissao = dataHoraEmissao;
         this.razaoSocial = razaoSocial;
@@ -55,6 +69,7 @@ public class NotaFiscalResponseDTO {
         this.fone = fone;
         this.baseCalculoIcms = baseCalculoIcms;
         this.valorIcms = valorIcms;
+        this.baseCalculoIcmsSt = baseCalculoIcmsSt;
         this.valorIcmsSt = valorIcmsSt;
         this.valorFrete = valorFrete;
         this.valorSeguro = valorSeguro;
@@ -62,5 +77,6 @@ public class NotaFiscalResponseDTO {
         this.valorIpi = valorIpi;
         this.valorTotalProdutos = valorTotalProdutos;
         this.valorTotalNota = valorTotalNota;
+        this.itens = itensDto; // ✅ LINHA CRUCIAL QUE FALTAVA!
     }
 }
