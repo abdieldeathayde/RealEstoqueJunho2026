@@ -19,4 +19,6 @@ public interface NotaFiscalRepository extends JpaRepository<NotaFiscal, Long> {
     List<NotaFiscal> findAllWithItens();
 
     Optional<NotaFiscal> findByNumero(Integer numero);
+
+    List<NotaFiscal> findByClienteId(Long clienteId);
 }

@@ -62,7 +62,11 @@ public class ItemNotaFiscal {
     private BigDecimal aliquotaIpi;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "nota_fiscal_id")
+    @JoinColumn(name = "produto_id", nullable = false)
+    private Produto produto;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "nota_fiscal_id", nullable = false)
     @JsonIgnore // Evita o loop infinito na serialização
     private NotaFiscal notaFiscal;
 }
